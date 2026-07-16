@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<title>PosPlatform — Kassir</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
+    body { height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #1e3a8a, #1d4ed8); }
+    .card { background:white; border-radius:16px; padding:40px 36px; width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.25); }
+    .logo { text-align:center; font-size:22px; font-weight:800; color:#1d4ed8; margin-bottom:4px; }
+    .subtitle { text-align:center; color:#94a3b8; font-size:13px; margin-bottom:28px; }
+    label { font-size:13px; color:#64748b; font-weight:600; display:block; margin-bottom:6px; }
+    input { width:100%; padding:11px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; margin-bottom:16px; box-sizing:border-box; }
+    button { width:100%; padding:13px; background:#1d4ed8; color:white; border:none; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; }
+    button:disabled { background:#cbd5e1; cursor:not-allowed; }
+    #dl-error { display:none; background:#fee2e2; color:#b91c1c; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">☁️ PosPlatform</div>
+        <div class="subtitle">Kassir kirishi</div>
+
+        <div id="dl-error"></div>
+
+        <label>Foydalanuvchi nomi</label>
+        <input type="text" id="dl-username" autocomplete="off">
+
+        <label>Parol</label>
+        <input type="password" id="dl-password">
+
+        <button id="dl-login-btn" onclick="desktopLogin()">Kirish</button>
+    </div>
+
+<script>
+document.getElementById('dl-password').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') desktopLogin();
+});
+
+function desktopLogin() {
+    const username = document.getElementById('dl-username').value.trim();
+    const password = document.getElementById('dl-password').value;
+    const errorBox = document.getElementById('dl-error');
+    const btn = document.getElementById('dl-login-btn');
+
+    if (!username || !password) {
+        errorBox.innerText = "Login va parolni kiriting!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Kirilmoqda...";
+
+    fetch('/api/auth/web-login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getDlCookie('csrftoken') },
+        body: JSON.stringify({ username, password, client: 'desktop' })
+    })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || "Kirishda xatolik yuz berdi");
+            }
+            return data;
+        })
+        .then(data => {
+            window.location.href = data.redirect_to;
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = "Kirish";
+        });
+}
+
+function getDlCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+</body>
+</html>

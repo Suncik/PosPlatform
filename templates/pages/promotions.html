@@ -1,0 +1,296 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="font-size:18px; color:#1e293b;">🏷️ Aksiyalar</h2>
+        <div id="promotions-count-label" style="color:#64748b; font-size:14px;"></div>
+    </div>
+
+    <div id="promo-success-banner" style="display:none; background:#dcfce7; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+    <div id="promo-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div style="display:grid; grid-template-columns:360px 1fr; gap:16px; align-items:start;">
+
+        <div style="background:white; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <h3 style="font-size:16px; color:#1e293b; margin-bottom:16px; font-weight:700;">Yangi aksiya</h3>
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Nomi</label>
+            <input type="text" id="promo-name-input" placeholder="Masalan: Yozgi chegirma"
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Chegirma foizi (%)</label>
+            <input type="number" id="promo-discount-input" value="10" min="0" max="100"
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Qamrov</label>
+            <select id="promo-scope-select" onchange="handleScopeChange()" style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                <option value="ALL">Barcha mahsulotlar</option>
+                <option value="CATEGORY">Kategoriya bo'yicha</option>
+                <option value="PRODUCT">Bitta mahsulot</option>
+            </select>
+
+            <div id="promo-category-field" style="display:none; margin-bottom:16px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Kategoriya</label>
+                <select id="promo-category-select" style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <option value="">Tanlang...</option>
+                </select>
+            </div>
+
+            <div id="promo-product-field" style="display:none; margin-bottom:16px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Mahsulot</label>
+                <select id="promo-product-select" style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <option value="">Tanlang...</option>
+                </select>
+            </div>
+
+            <div style="display:flex; gap:12px; margin-bottom:20px;">
+                <div style="flex:1;">
+                    <label style="font-size:13px; color:#64748b; font-weight:600;">Boshlanish</label>
+                    <input type="date" id="promo-start-input" style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:13px; color:#64748b; font-weight:600;">Tugash</label>
+                    <input type="date" id="promo-end-input" style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                </div>
+            </div>
+
+            <div id="promo-form-error" style="display:none; color:#ef4444; font-size:13px; margin-bottom:12px;"></div>
+
+            <button onclick="savePromotion()" style="width:100%; padding:12px; background:#1d4ed8; color:white; border:none; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer;">Qo'shish</button>
+        </div>
+
+        <div style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f8fafc; text-align:left;">
+                        <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">NOMI</th>
+                        <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">QAMROV</th>
+                        <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">CHEGIRMA</th>
+                        <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">MUDDAT</th>
+                        <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">HOLAT</th>
+                        <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;"></th>
+                    </tr>
+                </thead>
+                <tbody id="promotions-table-body">
+                    <tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+let allCategoriesForPromo = [];
+let allProductsForPromo = [];
+
+function init_promotions() {
+    const today = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(today.getDate() + 7);
+    document.getElementById('promo-start-input').value = today.toISOString().split('T')[0];
+    document.getElementById('promo-end-input').value = nextWeek.toISOString().split('T')[0];
+
+    loadCategoriesForPromo();
+    loadProductsForPromo();
+    loadPromotionsList();
+}
+
+function handleScopeChange() {
+    const scope = document.getElementById('promo-scope-select').value;
+    document.getElementById('promo-category-field').style.display = (scope === 'CATEGORY') ? 'block' : 'none';
+    document.getElementById('promo-product-field').style.display = (scope === 'PRODUCT') ? 'block' : 'none';
+}
+
+function loadCategoriesForPromo() {
+    fetch('/api/products/categories/')
+        .then(res => res.json())
+        .then(data => {
+            allCategoriesForPromo = data.results || data;
+            const sel = document.getElementById('promo-category-select');
+            sel.innerHTML = '<option value="">Tanlang...</option>' +
+                allCategoriesForPromo.map(c => `<option value="${c.id}">${escapeHtmlPromo(c.name)}</option>`).join('');
+        })
+        .catch(() => {});
+}
+
+function loadProductsForPromo() {
+    fetch('/api/products/list/')
+        .then(res => res.json())
+        .then(data => {
+            allProductsForPromo = data.results || data;
+            const sel = document.getElementById('promo-product-select');
+            sel.innerHTML = '<option value="">Tanlang...</option>' +
+                allProductsForPromo.map(p => `<option value="${p.id}">${escapeHtmlPromo(p.name)}</option>`).join('');
+        })
+        .catch(() => {});
+}
+
+function loadPromotionsList() {
+    fetch('/api/promotions/list/')
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            document.getElementById('promotions-count-label').innerText = `${list.length} ta`;
+            renderPromotionsTable(list);
+        })
+        .catch(() => {
+            document.getElementById('promotions-table-body').innerHTML =
+                '<tr><td colspan="6" style="padding:20px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+function renderPromotionsTable(list) {
+    const body = document.getElementById('promotions-table-body');
+
+    if (!list.length) {
+        body.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Aksiya yo\u2019q</td></tr>';
+        return;
+    }
+
+    const statusLabels = {
+        ACTIVE: { text: "Amalda", bg: "#dcfce7", color: "#16a34a" },
+        UPCOMING: { text: "Kutilmoqda", bg: "#fef3c7", color: "#92400e" },
+        ENDED: { text: "Tugagan", bg: "#f1f5f9", color: "#64748b" },
+        CANCELLED: { text: "Bekor qilingan", bg: "#fee2e2", color: "#b91c1c" },
+    };
+
+    body.innerHTML = list.map(p => {
+        let scopeLabel = "Barcha mahsulotlar";
+        if (p.scope === 'CATEGORY') scopeLabel = `Kategoriya: ${escapeHtmlPromo(p.category_name || '—')}`;
+        if (p.scope === 'PRODUCT') scopeLabel = `Mahsulot: ${escapeHtmlPromo(p.product_name || '—')}`;
+
+        const st = statusLabels[p.status] || statusLabels.ENDED;
+
+        return `
+            <tr style="border-top:1px solid #f1f5f9;">
+                <td style="padding:12px 20px; font-weight:700; color:#1e293b;">${escapeHtmlPromo(p.name)}</td>
+                <td style="padding:12px 20px; color:#64748b;">${scopeLabel}</td>
+                <td style="padding:12px 20px;"><span style="background:#fee2e2; color:#dc2626; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;">-${p.discount_percent}%</span></td>
+                <td style="padding:12px 20px; color:#64748b;">${formatDatePromo(p.start_date)} \u2013 ${formatDatePromo(p.end_date)}</td>
+                <td style="padding:12px 20px;"><span style="background:${st.bg}; color:${st.color}; font-size:12px; font-weight:700; padding:3px 12px; border-radius:999px;">${st.text}</span></td>
+                <td style="padding:12px 20px; white-space:nowrap;">
+                    ${p.is_active ? `<button onclick="deactivatePromotion(${p.id})" style="margin-right:6px; padding:6px 12px; background:white; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer; font-size:13px;">O'chirish</button>` : ''}
+                    <button onclick="deletePromotion(${p.id})" style="border:none; background:none; color:#94a3b8; cursor:pointer; font-size:16px;">✕</button>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function savePromotion() {
+    const name = document.getElementById('promo-name-input').value.trim();
+    const discount = document.getElementById('promo-discount-input').value;
+    const scope = document.getElementById('promo-scope-select').value;
+    const startDate = document.getElementById('promo-start-input').value;
+    const endDate = document.getElementById('promo-end-input').value;
+    const errorBox = document.getElementById('promo-form-error');
+
+    if (!name) {
+        errorBox.innerText = "Nomini kiriting!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    const payload = {
+        name: name,
+        discount_percent: discount,
+        scope: scope,
+        start_date: startDate,
+        end_date: endDate,
+        category: scope === 'CATEGORY' ? document.getElementById('promo-category-select').value : null,
+        product: scope === 'PRODUCT' ? document.getElementById('promo-product-select').value : null,
+    };
+
+    fetch('/api/promotions/list/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookiePromo('csrftoken') },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const firstError = Object.values(err)[0];
+                throw new Error(Array.isArray(firstError) ? firstError[0] : "Saqlashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(promo => {
+            errorBox.style.display = 'none';
+            document.getElementById('promo-name-input').value = '';
+            showPromoSuccess(`"${promo.name}" aksiyasi qo\u2019shildi`);
+            loadPromotionsList();
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+        });
+}
+
+function deactivatePromotion(id) {
+    fetch(`/api/promotions/list/${id}/deactivate/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookiePromo('csrftoken') }
+    })
+        .then(res => {
+            if (!res.ok) throw new Error("Bekor qilishda xatolik yuz berdi");
+            return res.json();
+        })
+        .then(() => loadPromotionsList())
+        .catch(err => showPromoError(err.message));
+}
+
+function deletePromotion(id) {
+    if (!confirm("Bu aksiyani butunlay o'chirishni tasdiqlaysizmi?")) return;
+
+    fetch(`/api/promotions/list/${id}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCookiePromo('csrftoken') }
+    })
+        .then(res => {
+            if (!res.ok && res.status !== 204) throw new Error("O'chirishda xatolik yuz berdi");
+            loadPromotionsList();
+        })
+        .catch(err => showPromoError(err.message));
+}
+
+function formatDatePromo(isoDate) {
+    if (!isoDate) return '—';
+    const parts = isoDate.split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function escapeHtmlPromo(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showPromoSuccess(message) {
+    const banner = document.getElementById('promo-success-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function showPromoError(message) {
+    const banner = document.getElementById('promo-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookiePromo(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_promotions();
+</script>

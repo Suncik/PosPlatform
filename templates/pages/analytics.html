@@ -1,0 +1,163 @@
+<div>
+    <h2 style="font-size:18px; color:#1e293b; font-weight:700; margin-bottom:20px;">Analitika</h2>
+
+    <div style="background:white; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px;">
+        <div style="display:flex; gap:16px; align-items:end; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Dan</label><br>
+                <input type="date" id="an-date-from" style="margin-top:6px; padding:9px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            </div>
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Gacha</label><br>
+                <input type="date" id="an-date-to" style="margin-top:6px; padding:9px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            </div>
+            <button onclick="loadAnalytics()" style="padding:10px 22px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Ko'rsatish</button>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:16px; margin-bottom:20px;">
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div id="an-tushum" style="font-size:24px; font-weight:700; color:#1d4ed8;">0</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">Tushum</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div id="an-tannarx" style="font-size:24px; font-weight:700; color:#ef4444;">0</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">Tannarx (COGS)</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div id="an-foyda" style="font-size:24px; font-weight:700; color:#16a34a;">0</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">Foyda</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div id="an-marja" style="font-size:24px; font-weight:700; color:#1e293b;">0%</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">Marja</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div id="an-savdolar" style="font-size:24px; font-weight:700; color:#1e293b;">0</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">Savdolar</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div id="an-avg-check" style="font-size:24px; font-weight:700; color:#1e293b;">0</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">O'rtacha chek</div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:20px;">
+        <div style="background:white; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <h3 style="font-size:15px; color:#1e293b; font-weight:700; margin-bottom:16px;">Kunlik sotuv</h3>
+            <div id="an-chart" style="display:flex; align-items:flex-end; gap:8px; height:220px; overflow-x:auto; padding-bottom:8px;"></div>
+        </div>
+
+        <div style="background:white; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <h3 style="font-size:15px; color:#1e293b; font-weight:700; margin-bottom:16px;">Eng ko'p sotilgan (tushum bo'yicha)</h3>
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="text-align:left;">
+                        <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">TOVAR</th>
+                        <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">SONI</th>
+                        <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">TUSHUM</th>
+                    </tr>
+                </thead>
+                <tbody id="an-top-products-body">
+                    <tr><td colspan="3" style="padding:16px 4px; color:#94a3b8;">Yuklanmoqda...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function init_analytics() {
+    const today = new Date();
+    const weekAgo = new Date();
+    weekAgo.setDate(today.getDate() - 6);
+
+    document.getElementById('an-date-from').value = formatDateInputAn(weekAgo);
+    document.getElementById('an-date-to').value = formatDateInputAn(today);
+
+    loadAnalytics();
+}
+
+function formatDateInputAn(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function loadAnalytics() {
+    const dateFrom = document.getElementById('an-date-from').value;
+    const dateTo = document.getElementById('an-date-to').value;
+
+    fetch(`/api/sales/analytics/?date_from=${dateFrom}&date_to=${dateTo}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('an-tushum').innerText = formatMoneyAn(data.tushum);
+            document.getElementById('an-tannarx').innerText = formatMoneyAn(data.tannarx);
+            document.getElementById('an-foyda').innerText = formatMoneyAn(data.foyda);
+            document.getElementById('an-marja').innerText = data.marja + '%';
+            document.getElementById('an-savdolar').innerText = data.savdolar;
+            document.getElementById('an-avg-check').innerText = formatMoneyAn(data.average_check);
+
+            renderAnChart(data.daily_sales);
+            renderAnTopProducts(data.top_products);
+        })
+        .catch(() => {
+            document.getElementById('an-top-products-body').innerHTML =
+                '<tr><td colspan="3" style="padding:16px 4px; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+function renderAnChart(dailySales) {
+    const container = document.getElementById('an-chart');
+
+    if (!dailySales.length) {
+        container.innerHTML = '<div style="color:#94a3b8; font-size:14px;">Bu davrda savdo yo\'q</div>';
+        return;
+    }
+
+    const maxVal = Math.max(...dailySales.map(d => d.total), 1);
+    const maxBarPx = 140;
+
+    container.innerHTML = dailySales.map(d => {
+        const barHeightPx = Math.max(6, Math.round((d.total / maxVal) * maxBarPx));
+        return `
+            <div style="display:flex; flex-direction:column; align-items:center; min-width:44px;">
+                <div style="font-size:12px; color:#1e293b; font-weight:600; margin-bottom:6px;">${formatMoneyAn(d.total)}</div>
+                <div style="width:32px; height:${barHeightPx}px; background:#1d4ed8; border-radius:6px 6px 0 0;"></div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:6px;">${d.label}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderAnTopProducts(products) {
+    const tbody = document.getElementById('an-top-products-body');
+
+    if (!products.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="padding:16px 4px; color:#94a3b8;">Ma\'lumot yo\'q</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = products.map(p => `
+        <tr style="border-top:1px solid #f1f5f9;">
+            <td style="padding:10px 4px; color:#1e293b; font-weight:600;">${escapeHtmlAn(p.name)}</td>
+            <td style="padding:10px 4px; color:#64748b;">${p.qty}</td>
+            <td style="padding:10px 4px; color:#1e293b; font-weight:600;">${formatMoneyAn(p.revenue)}</td>
+        </tr>
+    `).join('');
+}
+
+function formatMoneyAn(v) {
+    return Number(v || 0).toLocaleString('uz-UZ');
+}
+
+function escapeHtmlAn(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+init_analytics();
+</script>

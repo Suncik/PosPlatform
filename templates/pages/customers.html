@@ -1,0 +1,232 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+        <h2 style="font-size:18px; color:#1e293b; font-weight:700;">Mijozlar</h2>
+        <div style="display:flex; gap:10px;">
+            <input type="text" id="cu-search-input" placeholder="Qidirish (ism, tel)..." oninput="onCuSearchInput()"
+                style="padding:9px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; min-width:220px;">
+            <button onclick="toggleCuForm()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Mijoz</button>
+        </div>
+    </div>
+
+    <div id="cu-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div id="cu-new-form" style="display:none; background:white; border-radius:12px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px;">
+        <h3 style="font-size:16px; color:#1e293b; margin-bottom:16px; font-weight:700;">Yangi mijoz</h3>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Ism *</label>
+                <input type="text" id="cu-name-input"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Telefon</label>
+                <input type="text" id="cu-phone-input" placeholder="+998..."
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Email</label>
+                <input type="email" id="cu-email-input"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Chegirma (%)</label>
+                <input type="number" id="cu-discount-input" value="0" min="0" max="100"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+        </div>
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Manzil</label>
+        <input type="text" id="cu-address-input"
+            style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Izoh</label>
+        <input type="text" id="cu-comment-input"
+            style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+        <div id="cu-form-error" style="display:none; color:#ef4444; font-size:13px; margin-bottom:12px;"></div>
+
+        <div style="display:flex; gap:10px;">
+            <button onclick="saveCustomer()" style="padding:10px 22px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Saqlash</button>
+            <button onclick="toggleCuForm()" style="padding:10px 22px; background:white; color:#334155; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">Bekor</button>
+        </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">ISM</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">TELEFON</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">BALL</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">CHEGIRMA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SANA</th>
+                    <th style="padding:12px 20px;"></th>
+                </tr>
+            </thead>
+            <tbody id="cu-table-body">
+                <tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let cuSearchTimer = null;
+
+function init_customers() {
+    loadCuList();
+}
+
+function toggleCuForm() {
+    const form = document.getElementById('cu-new-form');
+    const isHidden = (form.style.display === 'none' || !form.style.display);
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        document.getElementById('cu-name-input').value = '';
+        document.getElementById('cu-phone-input').value = '';
+        document.getElementById('cu-email-input').value = '';
+        document.getElementById('cu-discount-input').value = 0;
+        document.getElementById('cu-address-input').value = '';
+        document.getElementById('cu-comment-input').value = '';
+        document.getElementById('cu-form-error').style.display = 'none';
+    }
+}
+
+// ========== QIDIRUV (DEBOUNCE) ==========
+function onCuSearchInput() {
+    clearTimeout(cuSearchTimer);
+    cuSearchTimer = setTimeout(loadCuList, 300);
+}
+
+// ========== RO'YXATNI YUKLASH ==========
+function loadCuList() {
+    const q = document.getElementById('cu-search-input').value.trim();
+    const url = q ? `/api/customers/list/?q=${encodeURIComponent(q)}` : '/api/customers/list/';
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const body = document.getElementById('cu-table-body');
+
+            if (!list.length) {
+                body.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Mijoz topilmadi</td></tr>';
+                return;
+            }
+
+            body.innerHTML = list.map(c => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:12px 20px; font-weight:600; color:#1e293b;">${escapeHtmlCu(c.name)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${c.phone ? escapeHtmlCu(c.phone) : '—'}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${c.points}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${c.discount_percent}%</td>
+                    <td style="padding:12px 20px; color:#64748b;">${formatDateCu(c.created_at)}</td>
+                    <td style="padding:12px 20px;"><button onclick="deleteCustomer(${c.id})" style="border:none; background:none; color:#ef4444; cursor:pointer; font-size:16px;">🗑️</button></td>
+                </tr>`).join('');
+        })
+        .catch(() => {
+            document.getElementById('cu-table-body').innerHTML =
+                '<tr><td colspan="6" style="padding:20px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+// ========== YANGI MIJOZ SAQLASH ==========
+function saveCustomer() {
+    const name = document.getElementById('cu-name-input').value.trim();
+    const errorBox = document.getElementById('cu-form-error');
+
+    if (!name) {
+        errorBox.innerText = "Ismini kiriting!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    const payload = {
+        name: name,
+        phone: document.getElementById('cu-phone-input').value.trim() || null,
+        email: document.getElementById('cu-email-input').value.trim() || null,
+        discount_percent: document.getElementById('cu-discount-input').value || 0,
+        address: document.getElementById('cu-address-input').value.trim() || null,
+        comment: document.getElementById('cu-comment-input').value.trim() || null,
+    };
+
+    fetch('/api/customers/list/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieCu('csrftoken') },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const firstError = Object.values(err)[0];
+                throw new Error(Array.isArray(firstError) ? firstError[0] : "Saqlashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            toggleCuForm();
+            loadCuList();
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+        });
+}
+
+// ========== MIJOZNI O'CHIRISH ==========
+function deleteCustomer(id) {
+    if (!confirm("Bu mijozni o'chirishni tasdiqlaysizmi?")) return;
+
+    fetch(`/api/customers/list/${id}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCookieCu('csrftoken') }
+    })
+        .then(res => {
+            if (!res.ok && res.status !== 204) throw new Error("O'chirishda xatolik yuz berdi");
+            loadCuList();
+        })
+        .catch(err => showCuError(err.message));
+}
+
+// ========== YORDAMCHI FUNKSIYALAR ==========
+function formatDateCu(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+}
+
+function escapeHtmlCu(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showCuError(message) {
+    const banner = document.getElementById('cu-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookieCu(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_customers();
+</script>

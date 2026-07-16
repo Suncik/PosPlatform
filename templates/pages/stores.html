@@ -1,0 +1,315 @@
+<div style="max-width: 1000px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b;">🏪 Do'konlar</h2>
+        <button onclick="toggleAddStoreForm()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Do'kon qo'shish</button>
+    </div>
+
+    <!-- ========== YANGI DO'KON QO'SHISH FORMASI (inline) ========== -->
+    <div id="add-store-form" style="display:none; background:white; border-radius:12px; padding:20px 24px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <h3 style="font-size:16px; color:#1e293b; margin-bottom:16px;">Yangi do'kon</h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; align-items:end;">
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Nomi</label>
+                <input type="text" id="store-name-input" placeholder="Masalan: Do'kon 2"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Manzil</label>
+                <input type="text" id="store-address-input" placeholder="Manzilni kiriting"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Faoliyat turi</label>
+                <select id="store-type-input"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <option value="dokon">🏪 Do'kon</option>
+                    <option value="restoran">🍽️ Restoran</option>
+                </select>
+            </div>
+        </div>
+        <div id="store-form-error" style="display:none; color:#ef4444; font-size:13px; margin-top:12px;"></div>
+        <button onclick="saveStore()" style="margin-top:16px; background:#1d4ed8; color:white; border:none; padding:10px 24px; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Saqlash</button>
+    </div>
+
+    <!-- ========== DO'KONLAR RO'YXATI ========== -->
+    <div id="stores-list-container">
+        <div style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</div>
+    </div>
+</div>
+
+<!-- ========== MODAL: XODIM BIRIKTIRISH ========== -->
+<div id="assign-staff-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(30,41,59,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; width:420px; max-width:90%; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+        <div style="padding:20px 24px; border-bottom:1px solid #e2e8f0;">
+            <h3 id="assign-staff-modal-title" style="font-size:17px; color:#1e293b; font-weight:700;">Xodim biriktirish</h3>
+        </div>
+        <div style="padding:24px;">
+            <input type="hidden" id="assign-store-id-input">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Foydalanuvchi</label>
+            <select id="assign-user-select"
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                <option value="">— Tanlang —</option>
+            </select>
+
+            <div id="assign-staff-error" style="display:none; color:#ef4444; font-size:13px; margin-bottom:12px;"></div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button onclick="closeAssignStaffModal()" style="padding:10px 18px; background:#f1f5f9; color:#334155; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">Yopish</button>
+                <button onclick="submitAssignStaff()" style="padding:10px 18px; background:#3b82f6; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Biriktirish</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== DO'KONLAR RO'YXATINI YUKLASH ==========
+function init_stores() {
+    loadStoresList();
+}
+
+function loadStoresList() {
+    fetch('/api/stores/list/')
+        .then(res => {
+            if (!res.ok) throw new Error('Server xatosi: ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            const container = document.getElementById('stores-list-container');
+            const list = data.results || data;
+
+            if (!list.length) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8;">Do\'konlar mavjud emas</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(store => renderStoreCard(store)).join('');
+        })
+        .catch(err => {
+            document.getElementById('stores-list-container').innerHTML =
+                `<div style="padding:20px; text-align:center; color:#ef4444;">Xatolik: do'konlarni yuklab bo'lmadi (${err.message})</div>`;
+        });
+}
+
+function renderStoreCard(store) {
+    const typeLabel = store.activity_type === 'restoran' ? "🍽️ Restoran" : "🏪 Do'kon";
+    const statusBadge = store.is_active
+        ? '<span style="background:#dcfce7; color:#16a34a; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;">Aktiv</span>'
+        : '<span style="background:#fee2e2; color:#dc2626; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;">Nofaol</span>';
+
+    const staffRows = (store.staff && store.staff.length)
+        ? store.staff.map(s => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9;">
+                <div>
+                    <div style="font-weight:700; color:#1e293b; font-size:14px;">${escapeHtml(s.full_name)}</div>
+                    <div style="color:#94a3b8; font-size:13px;">${escapeHtml(s.role_name)}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    ${s.is_active
+                        ? '<span style="background:#dcfce7; color:#16a34a; font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px;">Faol</span>'
+                        : '<span style="background:#fee2e2; color:#dc2626; font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px;">Nofaol</span>'}
+                    <button onclick="removeStaff(${s.id})" style="border:none; background:none; color:#ef4444; font-weight:700; font-size:13px; cursor:pointer;">Chiqarish</button>
+                </div>
+            </div>
+        `).join('')
+        : '<div style="color:#94a3b8; font-size:14px; padding:10px 0;">Xodim yo\'q</div>';
+
+    return `
+        <div style="background:white; border-radius:12px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #e2e8f0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-weight:700; color:#1e293b; font-size:16px;">${escapeHtml(store.name)}</span>
+                    <span style="background:#f1f5f9; color:#475569; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px;">${typeLabel}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <span style="color:#64748b; font-size:14px;">Balans: <b style="color:#1e293b;">${store.balance || 0}</b></span>
+                    ${statusBadge}
+                    <button onclick="deleteStore(${store.id}, '${escapeHtml(store.name)}')" style="padding:6px 14px; background:white; color:#dc2626; border:1px solid #fca5a5; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">O'chirish</button>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; padding:16px 20px;">
+                <div>
+                    <div style="font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px; margin-bottom:8px;">XODIMLAR (${store.staff ? store.staff.length : 0})</div>
+                    ${staffRows}
+                    <button onclick="openAssignStaffModal(${store.id}, '${escapeHtml(store.name)}')" style="margin-top:10px; padding:8px 14px; background:#f1f5f9; color:#334155; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">+ Xodim biriktirish</button>
+                </div>
+                <div>
+                    <div style="font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px; margin-bottom:8px;">KASSALAR (0)</div>
+                    <div style="color:#94a3b8; font-size:14px;">Kassa yo'q</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ========== YANGI DO'KON QO'SHISH ==========
+function toggleAddStoreForm() {
+    const form = document.getElementById('add-store-form');
+    form.style.display = (form.style.display === 'none') ? 'block' : 'none';
+}
+
+function saveStore() {
+    const name = document.getElementById('store-name-input').value.trim();
+    const address = document.getElementById('store-address-input').value.trim();
+    const activity_type = document.getElementById('store-type-input').value;
+    const errorBox = document.getElementById('store-form-error');
+
+    if (!name) {
+        errorBox.innerText = "Do'kon nomini kiriting!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    fetch('/api/stores/list/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ name, address, activity_type })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.name ? err.name[0] : "Saqlashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            document.getElementById('store-name-input').value = '';
+            document.getElementById('store-address-input').value = '';
+            errorBox.style.display = 'none';
+            toggleAddStoreForm();
+            loadStoresList();
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+        });
+}
+
+// ========== DO'KONNI O'CHIRISH ==========
+function deleteStore(id, name) {
+    if (!confirm(`"${name}" do'konini rostdan o'chirmoqchimisiz?`)) return;
+
+    fetch(`/api/stores/list/${id}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+        .then(res => {
+            if (!res.ok && res.status !== 204) throw new Error("O'chirishda xatolik yuz berdi");
+            loadStoresList();
+        })
+        .catch(err => alert(err.message));
+}
+
+// ========== XODIM BIRIKTIRISH MODALI ==========
+function openAssignStaffModal(storeId, storeName) {
+    document.getElementById('assign-staff-modal-title').innerText = `"${storeName}" — xodim biriktirish`;
+    document.getElementById('assign-store-id-input').value = storeId;
+    document.getElementById('assign-staff-error').style.display = 'none';
+
+    const select = document.getElementById('assign-user-select');
+    select.innerHTML = '<option value="">— Tanlang —</option>';
+
+    fetch('/api/auth/users/')
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const unassigned = list.filter(u => !u.store);
+            unassigned.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = `${u.username} (${u.role_name || 'Rol yo\'q'})`;
+                select.appendChild(opt);
+            });
+        })
+        .catch(() => {
+            document.getElementById('assign-staff-error').innerText = 'Foydalanuvchilarni yuklab bo\'lmadi';
+            document.getElementById('assign-staff-error').style.display = 'block';
+        });
+
+    document.getElementById('assign-staff-modal-overlay').style.display = 'flex';
+}
+
+function closeAssignStaffModal() {
+    document.getElementById('assign-staff-modal-overlay').style.display = 'none';
+}
+
+function submitAssignStaff() {
+    const storeId = document.getElementById('assign-store-id-input').value;
+    const userId = document.getElementById('assign-user-select').value;
+    const errorBox = document.getElementById('assign-staff-error');
+
+    if (!userId) {
+        errorBox.innerText = "Foydalanuvchini tanlang!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    fetch(`/api/auth/users/${userId}/`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ store: storeId })
+    })
+        .then(res => {
+            if (!res.ok) throw new Error("Biriktirishda xatolik yuz berdi");
+            return res.json();
+        })
+        .then(() => {
+            closeAssignStaffModal();
+            loadStoresList();
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+        });
+}
+
+// ========== XODIMNI DO'KONDAN CHIQARISH ==========
+function removeStaff(userId) {
+    if (!confirm("Bu xodimni do'kondan chiqarmoqchimisiz?")) return;
+
+    fetch(`/api/auth/users/${userId}/`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ store: null })
+    })
+        .then(res => {
+            if (!res.ok) throw new Error("Chiqarishda xatolik yuz berdi");
+            loadStoresList();
+        })
+        .catch(err => alert(err.message));
+}
+
+// ========== CSRF TOKEN OLISH ==========
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_stores();
+</script>

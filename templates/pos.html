@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PosPlatform — Savdo (Kassir)</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { display: flex; background-color: #f8fafc; color: #334155; height: 100vh; overflow: hidden; }
+
+    .sidebar { width: 220px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between; padding: 20px 0; flex-shrink: 0; }
+    .logo-section { padding: 0 20px; margin-bottom: 20px; font-size: 20px; font-weight: bold; color: #1e40af; }
+    .menu-list { list-style: none; padding: 0 10px; }
+    .menu-list li a { display: block; padding: 10px 12px; color: #64748b; text-decoration: none; font-weight: 500; font-size: 14px; border-radius: 8px; margin-bottom: 4px; }
+    .menu-list li a.active, .menu-list li a:hover { background: #eff6ff; color: #1d4ed8; }
+    .logout-btn { margin: 0 20px; padding: 10px; background: white; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; }
+    .logout-btn:hover { color: #ef4444; border-color: #fca5a5; }
+
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .top-bar { padding: 20px 24px; }
+    .content-row { flex: 1; display: flex; gap: 20px; padding: 0 24px 24px; overflow: hidden; }
+    .left-side { flex: 3; display: flex; flex-direction: column; overflow: hidden; }
+    .right-side { flex: 1.1; min-width: 340px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; display: flex; flex-direction: column; }
+
+    .search-bar { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; margin-bottom: 12px; box-sizing: border-box; }
+    .cat-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .cat-tab { padding: 8px 16px; border-radius: 999px; border: 1px solid #e2e8f0; background: white; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .cat-tab.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+
+    .product-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; align-content: start; }
+    .product-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; text-align: left; cursor: pointer; transition: 0.15s; }
+    .product-card:hover { border-color: #1d4ed8; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .product-card .p-name { font-weight: 700; font-size: 14px; color: #1e293b; margin-bottom: 6px; min-height: 36px; }
+    .product-card .p-price { color: #1d4ed8; font-weight: 700; font-size: 15px; }
+    .product-card .p-stock { color: #94a3b8; font-size: 12px; margin-top: 4px; }
+
+    .cart-items { flex: 1; overflow-y: auto; margin: 12px 0; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+    .cart-item .ci-name { font-weight: 600; font-size: 13.5px; color: #1e293b; flex: 1; }
+    .qty-control { display: flex; align-items: center; gap: 6px; }
+    .qty-btn { width: 24px; height: 24px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; cursor: pointer; font-weight: 700; color: #334155; }
+    .qty-value { width: 36px; text-align: center; font-size: 13px; font-weight: 600; }
+    .ci-remove { border: none; background: none; color: #ef4444; cursor: pointer; font-size: 15px; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { font-size: 13px; color: #64748b; font-weight: 600; display: block; margin-bottom: 6px; }
+    .form-control { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+
+    .btn-pay { width: 100%; padding: 15px; background: #22c55e; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 8px; }
+    .btn-pay:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+    .shift-banner { display: flex; justify-content: space-between; align-items: center; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 20px; }
+    .badge-open { background: #dcfce7; color: #16a34a; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div>
+        <div class="logo-section">☁️ PosPlatform</div>
+        <ul class="menu-list" id="pos-menu-list">
+            <li><a href="#" data-target="pos" class="active" onclick="switchPosPage('pos'); return false;">🧾 Savdo</a></li>
+            <li><a href="#" data-target="products" onclick="switchPosPage('products'); return false;">📦 Mahsulotlar</a></li>
+            <li><a href="#" data-target="sales" onclick="switchPosPage('sales'); return false;">📋 Savdolar</a></li>
+            <li><a href="#" data-target="shifts" onclick="switchPosPage('shifts'); return false;">⏱️ Smena</a></li>
+        </ul>
+    </div>  
+    <form id="logout-form" action="/admin/logout/" method="post" style="margin: 0 20px;">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn">Chiqish</button>
+    </form>
+</div>
+
+<div class="main">
+    <div id="pos-view">
+        <div class="top-bar">
+            <div id="shift-banner-container"><div style="color:#94a3b8;">Yuklanmoqda...</div></div>
+        </div>
+
+        <div class="content-row">
+            <div class="left-side">
+                <input type="text" class="search-bar" id="pos-search-input" placeholder="Qidirish yoki shtrix-kodni urang (Enter)..." autocomplete="off">
+                <div class="cat-tabs" id="pos-cat-tabs"></div>
+                <div class="product-grid" id="pos-product-grid">
+                    <div style="color:#94a3b8;">Yuklanmoqda...</div>
+                </div>
+            </div>
+
+            <div class="right-side">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="font-size:16px; color:#1e293b;">Savatcha</h3>
+                    <span id="pos-cart-count" style="color:#94a3b8; font-size:13px;">0 ta</span>
+                </div>
+
+                <div class="cart-items" id="pos-cart-items">
+                    <div style="color:#94a3b8; font-size:14px; padding:16px 0; text-align:center;">Mahsulot tanlang yoki shtrix-kod urang</div>
+                </div>
+
+                <div style="border-top:1px solid #e2e8f0; padding-top:14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <span style="font-weight:700; font-size:17px; color:#1e293b;">Jami</span>
+                        <span id="pos-total-label" style="font-weight:700; font-size:20px; color:#1e293b;">0 so'm</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>To'lov turi</label>
+                        <select id="pos-payment-type" class="form-control" onchange="renderPaymentInputs()">
+                            <option value="CASH">💵 Naqd</option>
+                            <option value="CARD">💳 Karta</option>
+                            <option value="MIXED">🔀 Aralash</option>
+                        </select>
+                    </div>
+
+                    <div id="pos-payment-inputs"></div>
+
+                    <button class="btn-pay" id="pos-pay-btn" onclick="submitSale()">To'lash (F12)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dynamic-view" style="display:none; padding:24px; overflow-y:auto; flex:1;"></div>
+</div>
+
+<script>
+let posCurrentShift = null;
+let posAllProducts = [];
+let posCategories = [];
+let posActiveCategory = '';
+let posCart = [];  // { product_id, name, price, qty, stock, unit }
+let posSearchTimer = null;
+
+const POS_STORE_ID = "{{ request.user.store.id|default:'' }}";
+const POS_USER_ID = "{{ request.user.id|default:'' }}";
+
+function switchPosPage(pageKey) {
+    document.querySelectorAll('#pos-menu-list a').forEach(a => a.classList.remove('active'));
+    document.querySelector(`#pos-menu-list a[data-target="${pageKey}"]`).classList.add('active');
+
+    const posView = document.getElementById('pos-view');
+    const dynamicView = document.getElementById('dynamic-view');
+
+    if (pageKey === 'pos') {
+        posView.style.display = 'flex';
+        posView.style.flexDirection = 'column';
+        posView.style.flex = '1';
+        posView.style.overflow = 'hidden';
+        dynamicView.style.display = 'none';
+        return;
+    }
+
+    posView.style.display = 'none';
+    dynamicView.style.display = 'block';
+    dynamicView.innerHTML = '<div style="color:#94a3b8;">Yuklanmoqda...</div>';
+
+    fetch(`/dashboard/pages/${pageKey}/`)
+        .then(res => {
+            if (!res.ok) throw new Error("Sahifa yuklanmadi");
+            return res.text();
+        })
+        .then(html => {
+            dynamicView.innerHTML = html;
+            // innerHTML orqali qo'shilgan <script> teglar avtomatik ishlamaydi,
+            // shuning uchun qo'lda qayta yaratamiz (dashboard.html dagi kabi)
+            dynamicView.querySelectorAll('script').forEach(oldScript => {
+                const newScript = document.createElement('script');
+                if (oldScript.src) newScript.src = oldScript.src;
+                else newScript.textContent = oldScript.textContent;
+                document.body.appendChild(newScript);
+                oldScript.remove();
+            });
+            if (typeof window[`init_${pageKey}`] === 'function') {
+                window[`init_${pageKey}`]();
+            }
+        })
+        .catch(err => {
+            dynamicView.innerHTML = `<div style="color:#ef4444;">Xatolik: ${err.message}</div>`;
+        });
+}
+function initPos() {
+    loadShiftState();
+    loadCategories();
+    loadProducts();
+
+    document.getElementById('pos-search-input').addEventListener('input', onPosSearchInput);
+    document.getElementById('pos-search-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); tryBarcodeAdd(this.value.trim()); }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F12') { e.preventDefault(); submitSale(); }
+    });
+
+    renderPaymentInputs();
+    document.getElementById('pos-search-input').focus(); 
+}
+
+// ========== SMENA HOLATI ==========
+function loadShiftState() {
+    fetch('/api/sales/shifts/current/')
+        .then(res => res.json())
+        .then(shift => {
+            posCurrentShift = (shift && shift.id) ? shift : null;
+            renderShiftBanner();
+            updatePayButtonState();
+        })
+        .catch(() => {
+            document.getElementById('shift-banner-container').innerHTML =
+                '<div style="color:#ef4444;">Smena holatini yuklab bo\'lmadi</div>';
+        });
+}
+
+function renderShiftBanner() {
+    const container = document.getElementById('shift-banner-container');
+
+    if (posCurrentShift) {
+        container.innerHTML = `
+            <div class="shift-banner">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <span class="badge-open">Smena ochiq</span>
+                    <span style="color:#64748b; font-size:14px;">Boshlang'ich naqd: ${formatMoneyPos(posCurrentShift.opening_balance)} so'm · ochilgan ${formatDateTimePos(posCurrentShift.opened_at)}</span>
+                </div>
+                <button onclick="closeShiftPrompt()" style="padding:8px 16px; background:white; color:#334155; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">Smenani yopish</button>
+            </div>
+        `;
+    } else {
+        container.innerHTML = `
+            <div class="shift-banner">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <span style="background:#fee2e2; color:#dc2626; font-size:12px; font-weight:700; padding:4px 12px; border-radius:999px;">Smena yopiq</span>
+                    <span style="color:#64748b; font-size:14px;">Savdo qilish uchun smenani oching</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="number" id="pos-opening-balance" value="0" min="0" style="width:140px; padding:9px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;">
+                    <button onclick="openShift()" style="padding:9px 18px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px;">Smenani ochish</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function openShift() {
+    const opening_balance = document.getElementById('pos-opening-balance').value || 0;
+
+    fetch('/api/sales/shifts/open_shift/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookiePos('csrftoken') },
+        body: JSON.stringify({ opening_balance })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Smenani ochishda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => loadShiftState())
+        .catch(err => alert(err.message));
+}
+
+function closeShiftPrompt() {
+    const closing_balance = prompt("Sanab chiqilgan naqd summani kiriting:", "0");
+    if (closing_balance === null) return;
+
+    fetch(`/api/sales/shifts/${posCurrentShift.id}/close_shift/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookiePos('csrftoken') },
+        body: JSON.stringify({ closing_balance: closing_balance || 0 })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Smenani yopishda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(report => {
+            alert(`Smena yopildi.\nSotuv jami: ${formatMoneyPos(report.sotuv_jami)} so'm\nFarq: ${formatMoneyPos(report.farq)} so'm`);
+            posCart = [];
+            renderCart();
+            loadShiftState();
+        })
+        .catch(err => alert(err.message));
+}
+
+// ========== KATEGORIYALAR ==========
+function loadCategories() {
+    fetch('/api/products/categories/')
+        .then(res => res.json())
+        .then(data => {
+            posCategories = data.results || data;
+            renderCategoryTabs();
+        })
+        .catch(() => {});
+}
+
+function renderCategoryTabs() {
+    const container = document.getElementById('pos-cat-tabs');
+    const allTab = `<div class="cat-tab ${posActiveCategory === '' ? 'active' : ''}" onclick="selectCategory('')">Barchasi</div>`;
+    const catTabs = posCategories.map(c =>
+        `<div class="cat-tab ${posActiveCategory === String(c.id) ? 'active' : ''}" onclick="selectCategory('${c.id}')">${escapeHtmlPos(c.name)}</div>`
+    ).join('');
+    container.innerHTML = allTab + catTabs;
+}
+
+function selectCategory(catId) {
+    posActiveCategory = catId;
+    renderCategoryTabs();
+    renderProductGrid();
+}
+
+// ========== MAHSULOTLAR ==========
+function loadProducts() {
+    const url = POS_STORE_ID ? `/api/products/list/?store=${POS_STORE_ID}` : '/api/products/list/';
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            posAllProducts = data.results || data;
+            renderProductGrid();
+        })
+        .catch(() => {
+            document.getElementById('pos-product-grid').innerHTML =
+                '<div style="color:#ef4444;">Mahsulotlarni yuklab bo\'lmadi</div>';
+        });
+}
+
+function renderProductGrid() {
+    const grid = document.getElementById('pos-product-grid');
+    const searchTerm = document.getElementById('pos-search-input').value.trim().toLowerCase();
+
+    let filtered = posAllProducts.filter(p => p.is_active);
+    if (posActiveCategory) {
+        filtered = filtered.filter(p => String(p.category) === posActiveCategory);
+    }
+    if (searchTerm) {
+        filtered = filtered.filter(p =>
+            p.name.toLowerCase().includes(searchTerm) || (p.barcode && p.barcode.includes(searchTerm))
+        );
+    }
+
+    if (!filtered.length) {
+        grid.innerHTML = '<div style="color:#94a3b8;">Mahsulot topilmadi</div>';
+        return;
+    }
+
+    grid.innerHTML = filtered.map(p => `
+        <div class="product-card" onclick="addToCart(${p.id})">
+            <div class="p-name">${escapeHtmlPos(p.name)}</div>
+            <div class="p-price">${formatMoneyPos(p.selling_price)} so'm</div>
+            <div class="p-stock">${p.stock} ${p.unit}</div>
+        </div>
+    `).join('');
+}
+
+function onPosSearchInput() {
+    clearTimeout(posSearchTimer);
+    posSearchTimer = setTimeout(renderProductGrid, 200);
+}
+
+// ========== TAROZI SHTRIX-KODINI ANIQLASH ==========
+function isValidEan13(code) {
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+        const digit = parseInt(code[i], 10);
+        sum += (i % 2 === 0) ? digit : digit * 3;
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return checkDigit === parseInt(code[12], 10);
+}
+
+function parseScaleBarcode(code) {
+    // Format: PP (prefiks) + PPPPP (PLU, 5 ta) + WWWWW (og'irlik gramda, 5 ta) + C (nazorat) = 13 raqam
+    if (!/^\d{13}$/.test(code)) return null;
+
+    const prefix = parseInt(code.substring(0, 2), 10);
+    if (prefix < 20 || prefix > 29) return null;   // Tarozi prefiksi odatda 20-29 oralig'ida
+    if (!isValidEan13(code)) return null;
+
+    const pluPart = code.substring(2, 7);
+    const weightGrams = parseInt(code.substring(7, 12), 10);
+
+    return { plu: pluPart, weightKg: weightGrams / 1000 };
+}
+
+function tryBarcodeAdd(code) {
+    if (!code) return;
+
+    // 1. Avval — bu tarozi shtrix-kodimi tekshiramiz (ichiga og'irlik yashiringan)
+    const scaleInfo = parseScaleBarcode(code);
+    if (scaleInfo) {
+        const product = posAllProducts.find(p =>
+            p.plu && (p.plu === scaleInfo.plu || p.plu === String(parseInt(scaleInfo.plu, 10)))
+        );
+        if (product) {
+            addToCart(product.id, scaleInfo.weightKg);
+        } else {
+            alert(`PLU ${scaleInfo.plu} bo'yicha mahsulot topilmadi (tarozi og'irligi: ${scaleInfo.weightKg} kg)`);
+        }
+        document.getElementById('pos-search-input').value = '';
+        renderProductGrid();
+        document.getElementById('pos-search-input').focus();
+        return;
+    }
+
+    // 2. Oddiy shtrix-kod (barcode maydoni bo'yicha)
+    const product = posAllProducts.find(p => p.barcode === code);
+    if (product) {
+        addToCart(product.id);
+        document.getElementById('pos-search-input').value = '';
+        renderProductGrid();
+        document.getElementById('pos-search-input').focus();
+    }
+}
+
+// ========== SAVATCHA ==========
+function addToCart(productId, qty) {
+    const product = posAllProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    // Agar "kg" birligida bo'lsa va miqdor berilmagan bo'lsa (ya'ni kartochka bosilgan) — og'irlik so'raymiz
+    if (product.unit === 'kg' && !qty) {
+        promptWeightForProduct(product);
+        return;
+    }
+
+    qty = qty || 1;
+
+    if (product.stock <= 0) {
+        alert("Bu mahsulotdan omborda qoldiq yo'q!");
+        return;
+    }
+
+    const existing = posCart.find(i => i.product_id === productId);
+    if (existing) {
+        if (existing.qty + qty > product.stock) {
+            alert(`Omborda faqat ${product.stock} ${product.unit} qoldi!`);
+            return;
+        }
+        existing.qty += qty;
+    } else {
+        if (qty > product.stock) {
+            alert(`Omborda faqat ${product.stock} ${product.unit} qoldi!`);
+            return;
+        }
+        posCart.push({
+            product_id: product.id,
+            name: product.name,
+            price: parseFloat(product.selling_price),
+            qty: qty,
+            stock: product.stock,
+            unit: product.unit,
+        });
+    }
+    renderCart();
+}
+
+function promptWeightForProduct(product) {
+    if (window.pywebview && window.pywebview.api) {
+        // Desktop dastur — tarozidan jonli og'irlikni so'raymiz
+        window.pywebview.api.get_scale_weight().then(data => {
+            const useLive = confirm(`Tarozida hozir: ${data.weight_kg.toFixed(3)} kg. Shu og'irlikni qabul qilasizmi?`);
+            const weight = useLive ? data.weight_kg : parseFloat(prompt("Og'irlikni kiriting (kg):", "0") || "0");
+            if (weight > 0) addToCart(product.id, weight);
+        }).catch(() => {
+            const weight = parseFloat(prompt(`"${product.name}" og'irligini kiriting (kg):`, "0") || "0");
+            if (weight > 0) addToCart(product.id, weight);
+        });
+    } else {
+        // Web versiya — qo'lda kiritish
+        const weight = parseFloat(prompt(`"${product.name}" og'irligini kiriting (kg):`, "0") || "0");
+        if (weight > 0) addToCart(product.id, weight);
+    }
+}
+
+function changeQty(productId, diff) {
+    const item = posCart.find(i => i.product_id === productId);
+    if (!item) return;
+
+    const newQty = item.qty + diff;
+    if (newQty <= 0) {
+        posCart = posCart.filter(i => i.product_id !== productId);
+    } else if (newQty > item.stock) {
+        alert(`Omborda faqat ${item.stock} ${item.unit} qoldi!`);
+        return;
+    } else {
+        item.qty = newQty;
+    }
+    renderCart();
+}
+
+function removeFromCart(productId) {
+    posCart = posCart.filter(i => i.product_id !== productId);
+    renderCart();
+}
+
+function getCartTotal() {
+    return posCart.reduce((sum, i) => sum + (i.qty * i.price), 0);
+}
+
+function renderCart() {
+    const container = document.getElementById('pos-cart-items');
+    document.getElementById('pos-cart-count').innerText = `${posCart.length} ta`;
+
+    if (!posCart.length) {
+        container.innerHTML = '<div style="color:#94a3b8; font-size:14px; padding:16px 0; text-align:center;">Mahsulot tanlang yoki shtrix-kod urang</div>';
+    } else {
+        container.innerHTML = posCart.map(item => `
+            <div class="cart-item">
+                <div class="ci-name">${escapeHtmlPos(item.name)}</div>
+                <div class="qty-control">
+                    <button class="qty-btn" onclick="changeQty(${item.product_id}, -1)">−</button>
+                    <span class="qty-value">${item.qty}</span>
+                    <button class="qty-btn" onclick="changeQty(${item.product_id}, 1)">+</button>
+                </div>
+                <div style="width:80px; text-align:right; font-weight:700; color:#1e293b; font-size:13.5px;">${formatMoneyPos(item.qty * item.price)}</div>
+                <button class="ci-remove" onclick="removeFromCart(${item.product_id})">✕</button>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('pos-total-label').innerText = formatMoneyPos(getCartTotal()) + " so'm";
+    renderPaymentInputs();
+    updatePayButtonState();
+}
+
+// ========== TO'LOV MAYDONLARI ==========
+function renderPaymentInputs() {
+    const type = document.getElementById('pos-payment-type').value;
+    const total = getCartTotal();
+    const container = document.getElementById('pos-payment-inputs');
+    if (type === 'CASH') {
+        container.innerHTML = `
+            <div class="form-group">
+                <label>Berilgan summa</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="number" id="pos-given-amount" class="form-control" value="${total}" min="0" oninput="updateChangeLabel()">
+                    <button onclick="setFullAmount()" style="padding:0 14px; background:#f1f5f9; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px; white-space:nowrap;">To'liq summa</button>
+                </div>
+            </div>
+            <div style="color:#1d4ed8; font-weight:600; font-size:14px; margin-bottom:10px;">Qaytim: <span id="pos-change-label">0</span> so'm</div>
+        `;
+        updateChangeLabel();
+    } else if (type === 'CARD') {
+        container.innerHTML = `<div style="color:#64748b; font-size:13px; margin-bottom:10px;">Karta orqali to'liq summa (${formatMoneyPos(total)} so'm) to'lanadi.</div>`;
+    } else {
+        container.innerHTML = `
+            <div class="form-group">
+                <label>Naqd miqdori</label>
+                <input type="number" id="pos-mixed-cash" class="form-control" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Karta miqdori</label>
+                <input type="number" id="pos-mixed-card" class="form-control" value="0" min="0">
+            </div>
+        `;
+    }
+}
+
+function setFullAmount() {
+    document.getElementById('pos-given-amount').value = getCartTotal();
+    updateChangeLabel();
+}
+
+function updateChangeLabel() {
+    const given = parseFloat(document.getElementById('pos-given-amount').value) || 0;
+    const total = getCartTotal();
+    const change = given - total;
+    document.getElementById('pos-change-label').innerText = formatMoneyPos(change > 0 ? change : 0);
+}
+
+function updatePayButtonState() {
+    const btn = document.getElementById('pos-pay-btn');
+    btn.disabled = !posCurrentShift || posCart.length === 0;
+}
+
+// ========== TO'LASH ==========
+function submitSale() {
+    if (!posCurrentShift) { alert("Avval smenani oching!"); return; }
+    if (!posCart.length) { alert("Savatcha bo'sh!"); return; }
+
+    const total = getCartTotal();
+    const type = document.getElementById('pos-payment-type').value;
+    let paid_cash = 0, paid_card = 0, payment_method = type;
+
+    if (type === 'CASH') {
+        const given = parseFloat(document.getElementById('pos-given-amount').value) || 0;
+        if (given < total) { alert("Berilgan summa yetarli emas!"); return; }
+        paid_cash = total;
+    } else if (type === 'CARD') {
+        paid_card = total;
+    } else {
+        paid_cash = parseFloat(document.getElementById('pos-mixed-cash').value) || 0;
+        paid_card = parseFloat(document.getElementById('pos-mixed-card').value) || 0;
+        if (Math.abs((paid_cash + paid_card) - total) > 0.01) {
+            alert(`Naqd + Karta summasi Jami summaga teng bo'lishi kerak! (${formatMoneyPos(total)} so'm)`);
+            return;
+        }
+    }
+
+    const payload = {
+        store: POS_STORE_ID,
+        cashier: POS_USER_ID,
+        shift: posCurrentShift.id,
+        total_amount: total,
+        paid_cash: paid_cash,
+        paid_card: paid_card,
+        payment_method: payment_method,
+        items: posCart.map(i => ({ product: i.product_id, quantity: i.qty, price: i.price })),
+    };
+
+    document.getElementById('pos-pay-btn').disabled = true;
+
+    fetch('/api/sales/transactions/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookiePos('csrftoken') },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const firstError = Object.values(err)[0];
+                throw new Error(Array.isArray(firstError) ? firstError[0] : (err.error || "Saqlashda xatolik yuz berdi"));
+            }
+            return res.json();
+        })
+        .then(sale => {
+            alert(`Chek #${sale.id} muvaffaqiyatli saqlandi!`);
+            posCart = [];
+            renderCart();
+            loadProducts();
+        })
+        .catch(err => alert(err.message))
+        .finally(() => updatePayButtonState());
+}
+
+// ========== YORDAMCHI FUNKSIYALAR ==========
+function formatMoneyPos(v) {
+    return Number(v || 0).toLocaleString('uz-UZ');
+}
+
+function formatDateTimePos(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy}, ${hh}:${min}`;
+}
+
+function escapeHtmlPos(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookiePos(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+initPos();
+</script>
+</body>
+</html>

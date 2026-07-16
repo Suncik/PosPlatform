@@ -1,0 +1,237 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="font-size:18px; color:#1e293b;">📊 Hisobotlar</h2>
+        <div style="display:flex; gap:10px;">
+            <button onclick="alert('Excel eksport — keyingi bosqichda')" style="padding:9px 16px; background:white; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#334155;">⬇️ Excel</button>
+            <button onclick="window.print()" style="padding:9px 16px; background:white; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#334155;">🖨️ Chop etish</button>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button id="tab-sales-btn" onclick="switchReportTab('sales')" style="padding:9px 18px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; border:1px solid #1d4ed8; background:#1d4ed8; color:white;">Savdolar</button>
+        <button id="tab-stock-btn" onclick="switchReportTab('stock')" style="padding:9px 18px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; border:1px solid #e2e8f0; background:white; color:#334155;">Qoldiqlar</button>
+    </div>
+
+    <div id="report-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div id="sales-report-tab">
+        <div style="background:white; border-radius:12px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; gap:16px; align-items:end; margin-bottom:16px; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Dan</label><br>
+                <input type="date" id="report-date-from" style="margin-top:6px; padding:9px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            </div>
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Gacha</label><br>
+                <input type="date" id="report-date-to" style="margin-top:6px; padding:9px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            </div>
+            <button onclick="loadSalesReport()" style="padding:10px 24px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Ko'rsatish</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:14px; margin-bottom:16px;">
+            <div style="background:white; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="font-size:13px; color:#64748b;">Jami tushum</div>
+                <div id="stat-jami-tushum" style="font-size:22px; font-weight:700; color:#1d4ed8; margin-top:6px;">0</div>
+            </div>
+            <div style="background:white; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="font-size:13px; color:#64748b;">Tannarx</div>
+                <div id="stat-tannarx" style="font-size:22px; font-weight:700; color:#1e293b; margin-top:6px;">0</div>
+            </div>
+            <div style="background:white; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="font-size:13px; color:#64748b;">Foyda</div>
+                <div id="stat-foyda" style="font-size:22px; font-weight:700; color:#16a34a; margin-top:6px;">0</div>
+            </div>
+            <div style="background:white; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="font-size:13px; color:#64748b;">Marjinallik</div>
+                <div id="stat-marjinallik" style="font-size:22px; font-weight:700; color:#16a34a; margin-top:6px;">0.0%</div>
+            </div>
+            <div style="background:white; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="font-size:13px; color:#64748b;">Savdolar soni</div>
+                <div id="stat-savdolar-soni" style="font-size:22px; font-weight:700; color:#1e293b; margin-top:6px;">0</div>
+            </div>
+            <div style="background:white; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="font-size:13px; color:#64748b;">Qaytarishlar</div>
+                <div id="stat-qaytarishlar" style="font-size:22px; font-weight:700; color:#ef4444; margin-top:6px;">0</div>
+            </div>
+        </div>
+
+        <div style="background:white; border-radius:12px; padding:14px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:16px; display:flex; gap:24px;">
+            <div>Naqd: <span id="stat-naqd" style="font-weight:700;">0</span></div>
+            <div>Karta: <span id="stat-karta" style="font-weight:700;">0</span></div>
+            <div>Nasiya: <span id="stat-nasiya" style="font-weight:700;">0</span></div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SANA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SAVDOLAR</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">TUSHUM</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">TANNARX</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">FOYDA</th>
+                </tr>
+            </thead>
+            <tbody id="sales-report-body">
+                <tr><td colspan="5" style="padding:20px; text-align:center; color:#94a3b8;">Ma'lumot yo'q</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="stock-report-tab" style="display:none;">
+        <div style="background:white; border-radius:12px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <button onclick="loadStockReport()" style="padding:10px 24px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Ko'rsatish</button>
+            <input type="text" id="stock-search-input" placeholder="Qidirish..." onkeyup="debouncedStockSearch()"
+                style="padding:9px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; width:220px;">
+        </div>
+
+        <div style="background:white; border-radius:12px; padding:14px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:16px; display:flex; gap:24px; flex-wrap:wrap;">
+            <div>Jami mahsulot: <span id="stock-total-products" style="font-weight:700;">0</span></div>
+            <div>Tannarx qiymati: <span id="stock-total-cost" style="font-weight:700;">0</span></div>
+            <div>Savdo qiymati: <span id="stock-total-sale" style="font-weight:700;">0</span></div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">MAHSULOT</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">KATEGORIYA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">BARCODE</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SONI</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">TANNARX</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">NARX</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">QIYMAT (TAN)</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">QIYMAT (SAVDO)</th>
+                </tr>
+            </thead>
+            <tbody id="stock-report-body">
+                <tr><td colspan="8" style="padding:20px; text-align:center; color:#94a3b8;">Ma'lumot yo'q</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let stockSearchTimer = null;
+
+function init_reports() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('report-date-from').value = today;
+    document.getElementById('report-date-to').value = today;
+    loadSalesReport();
+}
+
+function switchReportTab(tab) {
+    const salesBtn = document.getElementById('tab-sales-btn');
+    const stockBtn = document.getElementById('tab-stock-btn');
+    const salesTab = document.getElementById('sales-report-tab');
+    const stockTab = document.getElementById('stock-report-tab');
+
+    if (tab === 'sales') {
+        salesTab.style.display = 'block';
+        stockTab.style.display = 'none';
+        salesBtn.style.background = '#1d4ed8';
+        salesBtn.style.color = 'white';
+        stockBtn.style.background = 'white';
+        stockBtn.style.color = '#334155';
+    } else {
+        salesTab.style.display = 'none';
+        stockTab.style.display = 'block';
+        stockBtn.style.background = '#1d4ed8';
+        stockBtn.style.color = 'white';
+        salesBtn.style.background = 'white';
+        salesBtn.style.color = '#334155';
+        loadStockReport();
+    }
+}
+
+function loadSalesReport() {
+    const dateFrom = document.getElementById('report-date-from').value;
+    const dateTo = document.getElementById('report-date-to').value;
+
+    fetch(`/api/reports/sales/?date_from=${dateFrom}&date_to=${dateTo}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('stat-jami-tushum').innerText = fmtNum(data.jami_tushum);
+            document.getElementById('stat-tannarx').innerText = fmtNum(data.tannarx);
+            document.getElementById('stat-foyda').innerText = fmtNum(data.foyda);
+            document.getElementById('stat-marjinallik').innerText = data.marjinallik + '%';
+            document.getElementById('stat-savdolar-soni').innerText = data.savdolar_soni;
+            document.getElementById('stat-qaytarishlar').innerText = data.qaytarishlar;
+            document.getElementById('stat-naqd').innerText = fmtNum(data.naqd);
+            document.getElementById('stat-karta').innerText = fmtNum(data.karta);
+            document.getElementById('stat-nasiya').innerText = fmtNum(data.nasiya);
+
+            const body = document.getElementById('sales-report-body');
+            if (!data.daily || !data.daily.length) {
+                body.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:#94a3b8;">Ma\u2019lumot yo\u2019q</td></tr>';
+                return;
+            }
+
+            body.innerHTML = data.daily.map(row => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:12px 20px;">${row.date}</td>
+                    <td style="padding:12px 20px;">${row.sales_count}</td>
+                    <td style="padding:12px 20px; font-weight:700;">${fmtNum(row.income)}</td>
+                    <td style="padding:12px 20px;">${fmtNum(row.cost)}</td>
+                    <td style="padding:12px 20px; font-weight:700; color:#16a34a;">${fmtNum(row.profit)}</td>
+                </tr>`).join('');
+        })
+        .catch(() => showReportError("Hisobotni yuklashda xatolik yuz berdi"));
+}
+
+function debouncedStockSearch() {
+    clearTimeout(stockSearchTimer);
+    stockSearchTimer = setTimeout(loadStockReport, 400);
+}
+
+function loadStockReport() {
+    const search = document.getElementById('stock-search-input').value.trim();
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+
+    fetch(`/api/reports/stock/${query}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('stock-total-products').innerText = data.total_products;
+            document.getElementById('stock-total-cost').innerText = fmtNum(data.total_cost_value);
+            document.getElementById('stock-total-sale').innerText = fmtNum(data.total_sale_value);
+
+            const body = document.getElementById('stock-report-body');
+            if (!data.products || !data.products.length) {
+                body.innerHTML = '<tr><td colspan="8" style="padding:20px; text-align:center; color:#94a3b8;">Ma\u2019lumot yo\u2019q</td></tr>';
+                return;
+            }
+
+            body.innerHTML = data.products.map(p => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:12px 20px; font-weight:600;">${escapeHtmlRep(p.name)}</td>
+                    <td style="padding:12px 20px;">${escapeHtmlRep(p.category_name)}</td>
+                    <td style="padding:12px 20px; color:#94a3b8;">${p.barcode ? escapeHtmlRep(p.barcode) : '—'}</td>
+                    <td style="padding:12px 20px;">${p.stock} ${p.unit === 'dona' ? 'dona' : escapeHtmlRep(p.unit)}</td>
+                    <td style="padding:12px 20px;">${fmtNum(p.cost_price)}</td>
+                    <td style="padding:12px 20px;">${fmtNum(p.selling_price)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${fmtNum(p.cost_value)}</td>
+                    <td style="padding:12px 20px; font-weight:700;">${fmtNum(p.sale_value)}</td>
+                </tr>`).join('');
+        })
+        .catch(() => showReportError("Hisobotni yuklashda xatolik yuz berdi"));
+}
+
+function fmtNum(v) {
+    return Number(v || 0).toLocaleString('uz-UZ');
+}
+
+function escapeHtmlRep(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showReportError(message) {
+    const banner = document.getElementById('report-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+init_reports();
+</script>

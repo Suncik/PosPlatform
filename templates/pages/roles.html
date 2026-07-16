@@ -1,0 +1,316 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b; font-weight:700;">🔑 Rollar</h2>
+        <button onclick="openAddRoleModal()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Yangi rol</button>
+    </div>
+
+    <div id="rl-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+    <div id="rl-success-banner" style="display:none; background:#dcfce7; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">NOMI</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">RUXSATLAR</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">HOLAT</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;"></th>
+                </tr>
+            </thead>
+            <tbody id="rl-table-body">
+                <tr><td colspan="4" style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="rl-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(30,41,59,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; width:720px; max-width:94%; max-height:88vh; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #e2e8f0; position:sticky; top:0; background:white;">
+            <h3 id="rl-modal-title" style="font-size:18px; color:#1e293b; font-weight:700;">Yangi rol</h3>
+            <span onclick="closeRoleModal()" style="cursor:pointer; font-size:20px; color:#64748b;">✕</span>
+        </div>
+
+        <div style="padding:24px;">
+            <input type="hidden" id="rl-id-input">
+
+            <div style="display:flex; gap:16px; margin-bottom:20px; align-items:end;">
+                <div style="flex:1;">
+                    <label style="font-size:13px; color:#64748b; font-weight:600;">Rol nomi *</label>
+                    <input type="text" id="rl-name-input" placeholder="Masalan: Menejer"
+                        style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                </div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#64748b; font-weight:600; padding-bottom:10px;">
+                    <input type="checkbox" id="rl-active-input" checked style="width:18px; height:18px;"> Faol
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <label style="font-size:13px; color:#64748b; font-weight:700;">Ruxsatlar</label>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" onclick="toggleAllPermissions(true)" style="font-size:12px; color:#1d4ed8; background:none; border:none; cursor:pointer; font-weight:600;">Barchasini belgilash</button>
+                    <button type="button" onclick="toggleAllPermissions(false)" style="font-size:12px; color:#94a3b8; background:none; border:none; cursor:pointer; font-weight:600;">Tozalash</button>
+                </div>
+            </div>
+
+            <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                <thead>
+                    <tr style="text-align:left; border-bottom:1px solid #e2e8f0;">
+                        <th style="padding:8px; font-size:12px; color:#94a3b8;">BO'LIM</th>
+                        <th style="padding:8px; font-size:12px; color:#94a3b8; text-align:center;">Ko'rish</th>
+                        <th style="padding:8px; font-size:12px; color:#94a3b8; text-align:center;">Qo'shish</th>
+                        <th style="padding:8px; font-size:12px; color:#94a3b8; text-align:center;">Tahrirlash</th>
+                        <th style="padding:8px; font-size:12px; color:#94a3b8; text-align:center;">O'chirish</th>
+                    </tr>
+                </thead>
+                <tbody id="rl-permissions-body"></tbody>
+            </table>
+
+            <div id="rl-modal-error" style="display:none; color:#ef4444; font-size:13px; margin-bottom:12px;"></div>
+
+            <button id="rl-save-btn" onclick="saveRole()"
+                style="width:100%; padding:12px; background:#1d4ed8; color:white; border:none; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer;">
+                Saqlash
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const RL_MODULES = [
+    { key: 'stores', label: "Do'konlar" },
+    { key: 'products', label: 'Mahsulotlar' },
+    { key: 'categories', label: 'Kategoriyalar' },
+    { key: 'sales', label: 'Savdolar' },
+    { key: 'shifts', label: 'Smena' },
+    { key: 'suppliers', label: 'Yetkazib beruvchilar' },
+    { key: 'invoices', label: 'Накладная' },
+    { key: 'debts', label: 'Qarzdorlar' },
+    { key: 'expenses', label: 'Xarajatlar' },
+    { key: 'promotions', label: 'Aksiyalar' },
+    { key: 'transfer', label: 'Transfer' },
+    { key: 'reports', label: 'Hisobotlar' },
+    { key: 'users', label: 'Foydalanuvchilar' },
+    { key: 'settings', label: 'Sozlamalar' },
+];
+const RL_ACTIONS = ['view', 'create', 'edit', 'delete'];
+const RL_TOTAL_PERMISSIONS = RL_MODULES.length * RL_ACTIONS.length;
+
+let rlAllRoles = [];
+
+function init_roles() {
+    buildPermissionGrid();
+    loadRolesList();
+}
+
+function buildPermissionGrid() {
+    const body = document.getElementById('rl-permissions-body');
+    body.innerHTML = RL_MODULES.map(mod => `
+        <tr style="border-top:1px solid #f1f5f9;">
+            <td style="padding:8px; font-weight:600; color:#1e293b;">${escapeHtmlRl(mod.label)}</td>
+            ${RL_ACTIONS.map(action => `
+                <td style="padding:8px; text-align:center;">
+                    <input type="checkbox" data-perm="${mod.key}.${action}" style="width:17px; height:17px; cursor:pointer;">
+                </td>`).join('')}
+        </tr>`).join('');
+}
+
+function toggleAllPermissions(state) {
+    document.querySelectorAll('#rl-permissions-body input[type="checkbox"]').forEach(cb => cb.checked = state);
+}
+
+function collectPermissions() {
+    const permissions = {};
+    document.querySelectorAll('#rl-permissions-body input[type="checkbox"]').forEach(cb => {
+        permissions[cb.dataset.perm] = cb.checked;
+    });
+    return permissions;
+}
+
+function applyPermissions(permissions) {
+    document.querySelectorAll('#rl-permissions-body input[type="checkbox"]').forEach(cb => {
+        cb.checked = !!(permissions && permissions[cb.dataset.perm]);
+    });
+}
+
+function countActivePermissions(permissions) {
+    if (!permissions) return 0;
+    return Object.values(permissions).filter(v => v === true).length;
+}
+
+function loadRolesList() {
+    fetch('/api/auth/roles/')
+        .then(res => res.json())
+        .then(data => {
+            rlAllRoles = data.results || data;
+            renderRolesTable();
+        })
+        .catch(() => {
+            document.getElementById('rl-table-body').innerHTML =
+                '<tr><td colspan="4" style="padding:20px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+function renderRolesTable() {
+    const body = document.getElementById('rl-table-body');
+
+    if (!rlAllRoles.length) {
+        body.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#94a3b8;">Rollar mavjud emas</td></tr>';
+        return;
+    }
+
+    body.innerHTML = rlAllRoles.map(r => {
+        const activeCount = countActivePermissions(r.permissions);
+        const statusBadge = r.is_active
+            ? '<span style="background:#dcfce7; color:#16a34a; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;">Faol</span>'
+            : '<span style="background:#f1f5f9; color:#64748b; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;">Nofaol</span>';
+        const systemBadge = r.is_system
+            ? ' <span style="background:#eff6ff; color:#1d4ed8; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; margin-left:6px;">Tizim roli</span>'
+            : '';
+
+        return `
+            <tr style="border-top:1px solid #f1f5f9;">
+                <td style="padding:12px 20px; font-weight:700; color:#1e293b;">${escapeHtmlRl(r.name)}${systemBadge}</td>
+                <td style="padding:12px 20px; color:#64748b;">${activeCount} / ${RL_TOTAL_PERMISSIONS}</td>
+                <td style="padding:12px 20px;">${statusBadge}</td>
+                <td style="padding:12px 20px; text-align:right; white-space:nowrap;">
+                    <button onclick="openEditRoleModalById(${r.id})" style="margin-right:6px; padding:7px 14px; background:white; color:#334155; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">Tahrirlash</button>
+                    ${r.is_system ? '' : `<button onclick="deleteRole(${r.id})" style="padding:7px 14px; background:white; color:#ef4444; border:1px solid #fecaca; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">O'chirish</button>`}
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function resetRoleForm() {
+    document.getElementById('rl-id-input').value = '';
+    document.getElementById('rl-name-input').value = '';
+    document.getElementById('rl-active-input').checked = true;
+    document.getElementById('rl-modal-error').style.display = 'none';
+    toggleAllPermissions(false);
+}
+
+function openAddRoleModal() {
+    resetRoleForm();
+    document.getElementById('rl-modal-title').innerText = 'Yangi rol';
+    document.getElementById('rl-save-btn').innerText = 'Saqlash';
+    document.getElementById('rl-modal-overlay').style.display = 'flex';
+}
+
+function openEditRoleModalById(id) {
+    const role = rlAllRoles.find(r => r.id === id);
+    if (!role) return;
+
+    resetRoleForm();
+    document.getElementById('rl-modal-title').innerText = 'Rolni tahrirlash';
+    document.getElementById('rl-save-btn').innerText = 'Saqlash';
+    document.getElementById('rl-id-input').value = role.id;
+    document.getElementById('rl-name-input').value = role.name;
+    document.getElementById('rl-active-input').checked = !!role.is_active;
+    applyPermissions(role.permissions);
+    document.getElementById('rl-modal-overlay').style.display = 'flex';
+}
+
+function closeRoleModal() {
+    document.getElementById('rl-modal-overlay').style.display = 'none';
+}
+
+function saveRole() {
+    const id = document.getElementById('rl-id-input').value;
+    const name = document.getElementById('rl-name-input').value.trim();
+    const errorBox = document.getElementById('rl-modal-error');
+
+    if (!name) {
+        errorBox.innerText = "Rol nomini kiriting!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    const payload = {
+        name: name,
+        is_active: document.getElementById('rl-active-input').checked,
+        permissions: collectPermissions(),
+    };
+
+    const isEdit = !!id;
+    const url = isEdit ? `/api/auth/roles/${id}/` : '/api/auth/roles/';
+    const method = isEdit ? 'PATCH' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieRl('csrftoken') },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const firstError = Object.values(err)[0];
+                throw new Error(Array.isArray(firstError) ? firstError[0] : (err.error || "Saqlashda xatolik yuz berdi"));
+            }
+            return res.json();
+        })
+        .then(() => {
+            closeRoleModal();
+            loadRolesList();
+            showRlSuccess("Rol muvaffaqiyatli saqlandi");
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+        });
+}
+
+function deleteRole(id) {
+    if (!confirm("Bu rolni o'chirishni tasdiqlaysizmi?")) return;
+
+    fetch(`/api/auth/roles/${id}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCookieRl('csrftoken') }
+    })
+        .then(async res => {
+            if (!res.ok && res.status !== 204) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "O'chirishda xatolik yuz berdi");
+            }
+            loadRolesList();
+        })
+        .catch(err => showRlError(err.message));
+}
+
+function escapeHtmlRl(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showRlError(message) {
+    const banner = document.getElementById('rl-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function showRlSuccess(message) {
+    const banner = document.getElementById('rl-success-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookieRl(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_roles();
+</script>

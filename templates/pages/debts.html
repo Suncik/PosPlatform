@@ -1,0 +1,335 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b;">📕 Qarzdorlar</h2>
+        <button onclick="toggleNewDebtorForm()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Yangi qarzdor</button>
+    </div>
+
+    <div id="debtor-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:20px;">
+        <div style="background:white; border-radius:12px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#64748b; margin-bottom:8px;">Jami qarz</div>
+            <div id="stat-total-debt" style="font-size:24px; font-weight:700; color:#ef4444;">0 so'm</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#64748b; margin-bottom:8px;">Qarzdorlar soni</div>
+            <div id="stat-debtors-count" style="font-size:24px; font-weight:700; color:#1e293b;">0</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#64748b; margin-bottom:8px;">Qarzi borlar</div>
+            <div id="stat-with-debt-count" style="font-size:24px; font-weight:700; color:#f97316;">0</div>
+        </div>
+    </div>
+
+    <div id="new-debtor-form" style="display:none; background:white; border-radius:12px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px;">
+        <h3 style="font-size:16px; color:#1e293b; margin-bottom:16px; font-weight:700;">Yangi qarzdor</h3>
+
+        <div style="display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Ism *</label>
+                <input type="text" id="debtor-name-input" placeholder="Mijoz ismi"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Telefon</label>
+                <input type="text" id="debtor-phone-input" placeholder="+998 90 123 45 67"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:160px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Boshlang'ich qarz</label>
+                <input type="number" id="debtor-initial-debt-input" value="0" min="0"
+                    style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+        </div>
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Izoh</label>
+        <input type="text" id="debtor-comment-input" placeholder="Ixtiyoriy"
+            style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+        <div id="debtor-modal-error" style="display:none; color:#ef4444; font-size:13px; margin-bottom:12px;"></div>
+
+        <div style="display:flex; gap:10px;">
+            <button onclick="saveDebtor()" style="padding:10px 22px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Saqlash</button>
+            <button onclick="toggleNewDebtorForm()" style="padding:10px 22px; background:white; color:#334155; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">Bekor qilish</button>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:16px; align-items:start;">
+
+        <div style="background:white; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <input type="text" id="debtor-search-input" placeholder="Ism yoki telefon bo'yicha qidirish"
+                style="width:100%; padding:10px 14px; margin-bottom:14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="text-align:left; border-bottom:1px solid #e2e8f0;">
+                        <th style="padding:8px 12px; font-size:12px; color:#94a3b8;">MIJOZ</th>
+                        <th style="padding:8px 12px; font-size:12px; color:#94a3b8;">TELEFON</th>
+                        <th style="padding:8px 12px; font-size:12px; color:#94a3b8;">QARZI</th>
+                    </tr>
+                </thead>
+                <tbody id="debtors-table-body">
+                    <tr><td colspan="3" style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="debtor-detail-panel" style="background:white; border-radius:12px; padding:32px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); text-align:center; min-height:260px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+            <div style="font-size:32px; margin-bottom:12px;">👉</div>
+            <div style="color:#94a3b8; font-size:14px; line-height:1.6;">
+                Tafsilotlarni ko'rish va<br>to'lov qabul qilish uchun<br>ro'yxatdan qarzdorni tanlang
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allDebtorsList = [];
+let selectedDebtorId = null;
+let debtorSearchTimer = null;
+
+function init_debts() {
+    loadDebtorsStats();
+    loadDebtorsList();
+
+    document.getElementById('debtor-search-input').addEventListener('keyup', function () {
+        clearTimeout(debtorSearchTimer);
+        debtorSearchTimer = setTimeout(loadDebtorsList, 350);
+    });
+}
+
+function toggleNewDebtorForm() {
+    const form = document.getElementById('new-debtor-form');
+    const isHidden = (form.style.display === 'none' || !form.style.display);
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        document.getElementById('debtor-name-input').value = '';
+        document.getElementById('debtor-phone-input').value = '';
+        document.getElementById('debtor-initial-debt-input').value = 0;
+        document.getElementById('debtor-comment-input').value = '';
+        document.getElementById('debtor-modal-error').style.display = 'none';
+    }
+}
+
+function loadDebtorsStats() {
+    fetch('/api/debts/list/stats/')
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('stat-total-debt').innerText = Number(data.total_debt || 0).toLocaleString('uz-UZ') + " so'm";
+            document.getElementById('stat-debtors-count').innerText = data.debtors_count || 0;
+            document.getElementById('stat-with-debt-count').innerText = data.with_debt_count || 0;
+        })
+        .catch(() => {});
+}
+
+function loadDebtorsList() {
+    const search = document.getElementById('debtor-search-input').value.trim();
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+
+    fetch(`/api/debts/list/${query}`)
+        .then(res => res.json())
+        .then(data => {
+            allDebtorsList = data.results || data;
+            renderDebtorsTable();
+        })
+        .catch(() => {
+            document.getElementById('debtors-table-body').innerHTML =
+                '<tr><td colspan="3" style="padding:20px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+function renderDebtorsTable() {
+    const body = document.getElementById('debtors-table-body');
+
+    if (!allDebtorsList.length) {
+        body.innerHTML = '<tr><td colspan="3" style="padding:20px; text-align:center; color:#94a3b8;">Qarzdor topilmadi</td></tr>';
+        return;
+    }
+
+    body.innerHTML = allDebtorsList.map(d => {
+        const isSelected = (d.id === selectedDebtorId);
+        return `
+            <tr onclick="selectDebtor(${d.id})" style="border-top:1px solid #f1f5f9; cursor:pointer; ${isSelected ? 'background:#eff6ff;' : ''}">
+                <td style="padding:10px 12px; font-weight:600; color:#1e293b;">${escapeHtmlDebt(d.name)}</td>
+                <td style="padding:10px 12px; color:#64748b;">${d.phone ? escapeHtmlDebt(d.phone) : '—'}</td>
+                <td style="padding:10px 12px; font-weight:700; color:${d.current_balance > 0 ? '#ef4444' : '#16a34a'};">${Number(d.current_balance).toLocaleString('uz-UZ')}</td>
+            </tr>`;
+    }).join('');
+}
+
+function selectDebtor(id) {
+    selectedDebtorId = id;
+    renderDebtorsTable();
+    renderDebtorDetail();
+}
+
+function renderDebtorDetail() {
+    const panel = document.getElementById('debtor-detail-panel');
+    const d = allDebtorsList.find(item => item.id === selectedDebtorId);
+
+    if (!d) {
+        panel.style.textAlign = 'center';
+        panel.style.display = 'flex';
+        panel.style.flexDirection = 'column';
+        panel.style.alignItems = 'center';
+        panel.style.justifyContent = 'center';
+        panel.innerHTML = `
+            <div style="font-size:32px; margin-bottom:12px;">👉</div>
+            <div style="color:#94a3b8; font-size:14px; line-height:1.6;">
+                Tafsilotlarni ko'rish va<br>to'lov qabul qilish uchun<br>ro'yxatdan qarzdorni tanlang
+            </div>`;
+        return;
+    }
+
+    panel.style.textAlign = 'left';
+    panel.style.display = 'block';
+
+    let paymentsHtml = '<div style="color:#94a3b8; font-size:13px; padding:8px 0;">To\u2019lovlar tarixi mavjud emas</div>';
+    if (d.payments && d.payments.length) {
+        paymentsHtml = d.payments.map(p => `
+            <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:13px;">
+                <span style="color:#64748b;">${formatDateTimeDebt(p.created_at)}</span>
+                <span style="font-weight:700; color:#16a34a;">+${Number(p.amount).toLocaleString('uz-UZ')}</span>
+            </div>`).join('');
+    }
+
+    panel.innerHTML = `
+        <h3 style="font-size:16px; color:#1e293b; font-weight:700; margin-bottom:4px;">${escapeHtmlDebt(d.name)}</h3>
+        <div style="color:#64748b; font-size:13px; margin-bottom:16px;">${d.phone ? escapeHtmlDebt(d.phone) : "Telefon kiritilmagan"}</div>
+
+        <div style="background:#f8fafc; border-radius:10px; padding:16px; margin-bottom:16px;">
+            <div style="font-size:13px; color:#64748b;">Joriy qarz</div>
+            <div style="font-size:26px; font-weight:700; color:${d.current_balance > 0 ? '#ef4444' : '#16a34a'};">${Number(d.current_balance).toLocaleString('uz-UZ')} so'm</div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px; color:#64748b; font-weight:600;">To'lov qabul qilish</label>
+            <div style="display:flex; gap:8px; margin-top:6px;">
+                <input type="number" id="payment-amount-input" placeholder="Summa" min="0"
+                    style="flex:1; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                <button onclick="submitDebtPayment()" style="padding:10px 18px; background:#16a34a; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Qabul qilish</button>
+            </div>
+        </div>
+
+        <div>
+            <div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:6px;">TO'LOVLAR TARIXI</div>
+            ${paymentsHtml}
+        </div>
+    `;
+}
+
+function submitDebtPayment() {
+    if (!selectedDebtorId) return;
+    const amountInput = document.getElementById('payment-amount-input');
+    const amount = parseFloat(amountInput.value);
+
+    if (!amount || amount <= 0) {
+        showDebtorError("To'lov summasini kiriting!");
+        return;
+    }
+
+    fetch(`/api/debts/list/${selectedDebtorId}/add_payment/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieDebt('csrftoken') },
+        body: JSON.stringify({ amount })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "To'lovda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(updatedDebtor => {
+            const idx = allDebtorsList.findIndex(item => item.id === updatedDebtor.id);
+            if (idx !== -1) allDebtorsList[idx] = updatedDebtor;
+            renderDebtorsTable();
+            renderDebtorDetail();
+            loadDebtorsStats();
+        })
+        .catch(err => showDebtorError(err.message));
+}
+
+function saveDebtor() {
+    const name = document.getElementById('debtor-name-input').value.trim();
+    const errorBox = document.getElementById('debtor-modal-error');
+
+    if (!name) {
+        errorBox.innerText = "Ism majburiy!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    const payload = {
+        name: name,
+        phone: document.getElementById('debtor-phone-input').value.trim() || null,
+        initial_debt: document.getElementById('debtor-initial-debt-input').value || 0,
+        comment: document.getElementById('debtor-comment-input').value.trim() || null,
+    };
+
+    fetch('/api/debts/list/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieDebt('csrftoken') },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const firstError = Object.values(err)[0];
+                throw new Error(Array.isArray(firstError) ? firstError[0] : "Saqlashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            toggleNewDebtorForm();
+            loadDebtorsList();
+            loadDebtorsStats();
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+        });
+}
+
+function formatDateTimeDebt(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
+function escapeHtmlDebt(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showDebtorError(message) {
+    const banner = document.getElementById('debtor-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookieDebt(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_debts();
+</script>

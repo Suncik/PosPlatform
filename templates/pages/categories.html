@@ -1,0 +1,200 @@
+<div style="max-width: 900px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b;">🏷️ Kategoriyalar ro'yxati</h2>
+        <button onclick="openAddCategoryModal()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Kategoriya qo'shish</button>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <thead>
+            <tr style="background:#f1f5f9; text-align:left;">
+                <th style="padding:12px 16px; font-size:13px; color:#64748b;">ID</th>
+                <th style="padding:12px 16px; font-size:13px; color:#64748b;">Nomi</th>
+                <th style="padding:12px 16px; font-size:13px; color:#64748b;">Izoh</th>
+                <th style="padding:12px 16px; font-size:13px; color:#64748b;">Mahsulotlar</th>
+                <th style="padding:12px 16px; font-size:13px; color:#64748b;">Holati</th>
+                <th style="padding:12px 16px; font-size:13px; color:#64748b;">Amallar</th>
+            </tr>
+        </thead>
+        <tbody id="categories-table-body">
+            <tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ========== MODAL OYNA (Qo'shish / Tahrirlash uchun umumiy) ========== -->
+<div id="category-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(30,41,59,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; width:420px; max-width:90%; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #e2e8f0;">
+            <h3 id="category-modal-title" style="font-size:18px; color:#1e293b; font-weight:700;">Yangi kategoriya</h3>
+            <span onclick="closeCategoryModal()" style="cursor:pointer; font-size:20px; color:#64748b;">✕</span>
+        </div>
+
+        <div style="padding:24px;">
+            <input type="hidden" id="category-id-input">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Nomi *</label>
+            <input type="text" id="category-name-input" placeholder="Masalan: Ichimliklar"
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Izoh (ixtiyoriy)</label>
+            <input type="text" id="category-description-input" placeholder="Qo'shimcha izoh"
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:20px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <div id="category-modal-error" style="display:none; color:#ef4444; font-size:13px; margin-bottom:12px;"></div>
+
+            <button id="category-save-btn" onclick="saveCategory()"
+                style="width:100%; padding:12px; background:#1d4ed8; color:white; border:none; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer;">
+                Qo'shish
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== KATEGORIYALAR RO'YXATINI YUKLASH ==========
+function init_categories() {
+    loadCategoriesList();
+}
+
+function loadCategoriesList() {
+    fetch('/api/products/categories/')
+        .then(res => {
+            if (!res.ok) throw new Error('Server xatosi: ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            const body = document.getElementById('categories-table-body');
+            const list = data.results || data;
+
+            if (!list.length) {
+                body.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Kategoriyalar mavjud emas</td></tr>';
+                return;
+            }
+
+            body.innerHTML = list.map(cat => `
+                <tr style="border-top:1px solid #e2e8f0;">
+                    <td style="padding:12px 16px;">${cat.id}</td>
+                    <td style="padding:12px 16px; font-weight:600;">${escapeHtml(cat.name)}</td>
+                    <td style="padding:12px 16px; color:#64748b;">${cat.description ? escapeHtml(cat.description) : '—'}</td>
+                    <td style="padding:12px 16px;">${cat.products_count || 0} ta</td>
+                    <td style="padding:12px 16px;">${cat.is_active ? '✅ Faol' : '⛔ Nofaol'}</td>
+                    <td style="padding:12px 16px;">
+                        <button onclick='openEditCategoryModal(${JSON.stringify(cat)})' style="margin-right:8px; border:none; background:none; cursor:pointer; font-size:16px;" title="Tahrirlash">✏️</button>
+                        <button onclick="deleteCategory(${cat.id}, '${escapeHtml(cat.name)}')" style="border:none; background:none; cursor:pointer; font-size:16px;" title="O'chirish">🗑️</button>
+                    </td>
+                </tr>`).join('');
+        })
+        .catch(err => {
+            document.getElementById('categories-table-body').innerHTML =
+                `<tr><td colspan="6" style="padding:20px; text-align:center; color:#ef4444;">Xatolik: kategoriyalarni yuklab bo'lmadi (${err.message})</td></tr>`;
+        });
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ========== MODALNI OCHISH / YOPISH ==========
+function openAddCategoryModal() {
+    document.getElementById('category-modal-title').innerText = 'Yangi kategoriya';
+    document.getElementById('category-save-btn').innerText = "Qo'shish";
+    document.getElementById('category-id-input').value = '';
+    document.getElementById('category-name-input').value = '';
+    document.getElementById('category-description-input').value = '';
+    document.getElementById('category-modal-error').style.display = 'none';
+    document.getElementById('category-modal-overlay').style.display = 'flex';
+}
+
+function openEditCategoryModal(cat) {
+    document.getElementById('category-modal-title').innerText = 'Kategoriyani tahrirlash';
+    document.getElementById('category-save-btn').innerText = 'Saqlash';
+    document.getElementById('category-id-input').value = cat.id;
+    document.getElementById('category-name-input').value = cat.name;
+    document.getElementById('category-description-input').value = cat.description || '';
+    document.getElementById('category-modal-error').style.display = 'none';
+    document.getElementById('category-modal-overlay').style.display = 'flex';
+}
+
+function closeCategoryModal() {
+    document.getElementById('category-modal-overlay').style.display = 'none';
+}
+
+// ========== SAQLASH (Qo'shish yoki Tahrirlash) ==========
+function saveCategory() {
+    const id = document.getElementById('category-id-input').value;
+    const name = document.getElementById('category-name-input').value.trim();
+    const description = document.getElementById('category-description-input').value.trim();
+    const errorBox = document.getElementById('category-modal-error');
+
+    if (!name) {
+        errorBox.innerText = "Kategoriya nomini kiriting!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    const isEdit = !!id;
+    const url = isEdit ? `/api/products/categories/${id}/` : '/api/products/categories/';
+    const method = isEdit ? 'PATCH' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ name, description })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.name ? err.name[0] : 'Saqlashda xatolik yuz berdi');
+            }
+            return res.json();
+        })
+        .then(() => {
+            closeCategoryModal();
+            loadCategoriesList();
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+        });
+}
+
+// ========== O'CHIRISH ==========
+function deleteCategory(id, name) {
+    if (!confirm(`"${name}" kategoriyasini rostdan o'chirmoqchimisiz?`)) return;
+
+    fetch(`/api/products/categories/${id}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+        .then(res => {
+            if (!res.ok && res.status !== 204) throw new Error('O\'chirishda xatolik yuz berdi');
+            loadCategoriesList();
+        })
+        .catch(err => alert(err.message));
+}
+
+// ========== CSRF TOKEN OLISH (Django uchun shart) ==========
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Sahifa birinchi marta yuklanganda ham ishga tushishi uchun
+init_categories();
+</script>

@@ -1,0 +1,191 @@
+<div>
+    <h2 style="font-size:18px; color:#1e293b; font-weight:700; margin-bottom:20px;">⚙️ Sozlamalar</h2>
+
+    <div id="st-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+    <div id="st-success-banner" style="display:none; background:#dcfce7; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div style="background:white; border-radius:12px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px; max-width:520px;">
+        <h3 style="font-size:16px; color:#1e293b; font-weight:700; margin-bottom:4px;">Parolni o'zgartirish</h3>
+        <div style="color:#64748b; font-size:13px; margin-bottom:20px;">Joriy parolingizni tasdiqlab, yangi parol belgilang.</div>
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Joriy parol</label>
+        <input type="password" id="st-current-password" style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Yangi parol</label>
+        <input type="password" id="st-new-password" placeholder="kamida 6 belgi" style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Yangi parol (tasdiq)</label>
+        <input type="password" id="st-confirm-password" style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:20px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+        <button onclick="changeStPassword()" style="padding:11px 24px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Parolni saqlash</button>
+    </div>
+
+    <div style="background:white; border-radius:12px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); max-width:720px;">
+        <div style="color:#64748b; font-size:13px; margin-bottom:20px; line-height:1.6;">
+            Har bir filial uchun faoliyat turini tanlang. Restoran filialida stol boshqaruvi, ovqat menyusi (retsept) va ombordan oshpazga berish modullari yoqiladi. Bitta tashkilotda do'kon ham, restoran ham bo'lishi mumkin.
+        </div>
+
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="text-align:left; border-bottom:1px solid #e2e8f0;">
+                    <th style="padding:8px 0; font-size:12px; color:#94a3b8; font-weight:700;">FILIAL</th>
+                    <th style="padding:8px 0; font-size:12px; color:#94a3b8; font-weight:700;">FAOLIYAT TURI</th>
+                </tr>
+            </thead>
+            <tbody id="st-stores-body">
+                <tr><td colspan="2" style="padding:20px 0; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let stAllStores = [];
+
+function init_settings() {
+    loadStStoresList();
+}
+
+function changeStPassword() {
+    const currentPassword = document.getElementById('st-current-password').value;
+    const newPassword = document.getElementById('st-new-password').value;
+    const confirmPassword = document.getElementById('st-confirm-password').value;
+
+    if (!currentPassword) {
+        showStError("Joriy parolni kiriting!");
+        return;
+    }
+    if (newPassword.length < 6) {
+        showStError("Yangi parol kamida 6 belgidan iborat bo'lishi kerak!");
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        showStError("Yangi parollar mos kelmadi!");
+        return;
+    }
+
+    fetch('/api/auth/change-password/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieSt('csrftoken') },
+        body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword,
+            confirm_password: confirmPassword,
+        })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            document.getElementById('st-current-password').value = '';
+            document.getElementById('st-new-password').value = '';
+            document.getElementById('st-confirm-password').value = '';
+            showStSuccess("Parol muvaffaqiyatli yangilandi");
+        })
+        .catch(err => showStError(err.message));
+}
+
+function loadStStoresList() {
+    fetch('/api/stores/list/')
+        .then(res => res.json())
+        .then(data => {
+            stAllStores = data.results || data;
+            renderStStoresTable();
+        })
+        .catch(() => {
+            document.getElementById('st-stores-body').innerHTML =
+                '<tr><td colspan="2" style="padding:20px 0; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+function renderStStoresTable() {
+    const body = document.getElementById('st-stores-body');
+
+    if (!stAllStores.length) {
+        body.innerHTML = '<tr><td colspan="2" style="padding:20px 0; text-align:center; color:#94a3b8;">Filiallar mavjud emas</td></tr>';
+        return;
+    }
+
+    body.innerHTML = stAllStores.map(s => {
+        const isShop = (s.activity_type === 'SHOP' || !s.activity_type);
+        return `
+            <tr style="border-top:1px solid #f1f5f9;">
+                <td style="padding:14px 0; font-weight:700; color:#1e293b;">${escapeHtmlSt(s.name)}</td>
+                <td style="padding:14px 0;">
+                    <div style="display:inline-flex; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                        <button onclick="setStoreActivityType(${s.id}, 'SHOP')"
+                            style="padding:8px 16px; border:none; cursor:pointer; font-size:13px; font-weight:600; ${isShop ? 'background:#1d4ed8; color:white;' : 'background:white; color:#334155;'}">
+                            🏪 Do'kon
+                        </button>
+                        <button onclick="setStoreActivityType(${s.id}, 'RESTAURANT')"
+                            style="padding:8px 16px; border:none; border-left:1px solid #e2e8f0; cursor:pointer; font-size:13px; font-weight:600; ${!isShop ? 'background:#1d4ed8; color:white;' : 'background:white; color:#334155;'}">
+                            🍽️ Restoran
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function setStoreActivityType(storeId, activityType) {
+    fetch(`/api/stores/list/${storeId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieSt('csrftoken') },
+        body: JSON.stringify({ activity_type: activityType })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Yangilashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            loadStStoresList();
+            showStSuccess("Faoliyat turi yangilandi");
+        })
+        .catch(err => showStError(err.message));
+}
+
+function escapeHtmlSt(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showStError(message) {
+    const banner = document.getElementById('st-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function showStSuccess(message) {
+    const banner = document.getElementById('st-success-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookieSt(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_settings();
+</script>

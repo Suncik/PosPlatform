@@ -1,0 +1,275 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b; font-weight:700;">Hisobdan chiqarish (списание)</h2>
+        <button onclick="toggleWriteoffForm()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Yangi</button>
+    </div>
+
+    <div id="writeoff-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div id="new-writeoff-form" style="display:none; background:white; border-radius:12px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px;">
+        <h3 style="font-size:16px; color:#1e293b; margin-bottom:16px; font-weight:700;">Yangi hisobdan chiqarish</h3>
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Sabab</label>
+        <input type="text" id="wo-reason-input" placeholder="Muddati o'tgan, buzilgan..."
+            style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Tovar qo'shish</label>
+        <div style="position:relative;">
+            <input type="text" id="wo-product-search" placeholder="Qidirish (nom/shtrix-kod)..." oninput="searchWoProducts()" autocomplete="off"
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            <div id="wo-search-results" style="display:none; position:absolute; top:44px; left:0; right:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,0.1); z-index:50; max-height:240px; overflow-y:auto;"></div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+            <thead>
+                <tr style="text-align:left;">
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">TOVAR</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">MIQDOR</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">TANNARX SUMMA</th>
+                    <th style="padding:8px 4px;"></th>
+                </tr>
+            </thead>
+            <tbody id="wo-items-body">
+                <tr><td colspan="4" style="padding:14px 4px; color:#94a3b8;">Tovar qo'shilmagan</td></tr>
+            </tbody>
+        </table>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+            <div style="font-weight:700; color:#1e293b; font-size:15px;">Jami tannarx: <span id="wo-total-cost">0</span> so'm</div>
+            <button onclick="submitWriteoff()" style="padding:11px 22px; background:#ef4444; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Hisobdan chiqarish</button>
+        </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">№</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SABAB</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SANA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">TANNARX</th>
+                </tr>
+            </thead>
+            <tbody id="wo-history-body">
+                <tr><td colspan="4" style="padding:24px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let woItems = [];  // { product_id, name, quantity, cost_price }
+let woSearchTimer = null;
+
+function init_writeoffs() {
+    loadWoHistory();
+}
+
+function toggleWriteoffForm() {
+    const form = document.getElementById('new-writeoff-form');
+    const isHidden = (form.style.display === 'none' || !form.style.display);
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        document.getElementById('wo-reason-input').value = '';
+        document.getElementById('wo-product-search').value = '';
+        document.getElementById('wo-search-results').style.display = 'none';
+        woItems = [];
+        renderWoItems();
+    }
+}
+
+// ========== TOVAR QIDIRISH (AUTOCOMPLETE) ==========
+function searchWoProducts() {
+    clearTimeout(woSearchTimer);
+    const q = document.getElementById('wo-product-search').value.trim();
+    const resultsBox = document.getElementById('wo-search-results');
+
+    if (!q) {
+        resultsBox.style.display = 'none';
+        return;
+    }
+
+    woSearchTimer = setTimeout(() => {
+        fetch(`/api/products/list/search/?q=${encodeURIComponent(q)}`)
+            .then(res => res.json())
+            .then(data => {
+                const list = Array.isArray(data) ? data : (data.results || []);
+                if (!list.length) {
+                    resultsBox.innerHTML = '<div style="padding:10px 14px; color:#94a3b8; font-size:14px;">Topilmadi</div>';
+                    resultsBox.style.display = 'block';
+                    return;
+                }
+                resultsBox.innerHTML = list.map(p => `
+                    <div onclick='addWoProduct(${p.id}, ${JSON.stringify(p.name)}, ${p.cost_price})'
+                        style="padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; font-size:14px;"
+                        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <div style="font-weight:600; color:#1e293b;">${escapeHtmlWo(p.name)}</div>
+                        <div style="color:#94a3b8; font-size:12px;">Qoldiq: ${p.stock} · Tannarx: ${formatMoneyWo(p.cost_price)} so'm</div>
+                    </div>
+                `).join('');
+                resultsBox.style.display = 'block';
+            })
+            .catch(() => { resultsBox.style.display = 'none'; });
+    }, 300);
+}
+
+function addWoProduct(id, name, costPrice) {
+    const existing = woItems.find(i => i.product_id === id);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        woItems.push({ product_id: id, name: name, quantity: 1, cost_price: costPrice });
+    }
+    document.getElementById('wo-product-search').value = '';
+    document.getElementById('wo-search-results').style.display = 'none';
+    renderWoItems();
+}
+
+function removeWoItem(productId) {
+    woItems = woItems.filter(i => i.product_id !== productId);
+    renderWoItems();
+}
+
+function updateWoQuantity(productId, value) {
+    const item = woItems.find(i => i.product_id === productId);
+    if (item) {
+        item.quantity = parseFloat(value) || 0;
+        renderWoItems();
+    }
+}
+
+function renderWoItems() {
+    const tbody = document.getElementById('wo-items-body');
+
+    if (!woItems.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:14px 4px; color:#94a3b8;">Tovar qo\'shilmagan</td></tr>';
+        document.getElementById('wo-total-cost').innerText = '0';
+        return;
+    }
+
+    tbody.innerHTML = woItems.map(item => `
+        <tr style="border-top:1px solid #f1f5f9;">
+            <td style="padding:10px 4px; color:#1e293b; font-weight:600;">${escapeHtmlWo(item.name)}</td>
+            <td style="padding:10px 4px;">
+                <input type="number" value="${item.quantity}" min="0" step="0.001" onchange="updateWoQuantity(${item.product_id}, this.value)"
+                    style="width:80px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px;">
+            </td>
+            <td style="padding:10px 4px; color:#1e293b; font-weight:600;">${formatMoneyWo(item.quantity * item.cost_price)} so'm</td>
+            <td style="padding:10px 4px;"><button onclick="removeWoItem(${item.product_id})" style="border:none; background:none; color:#ef4444; cursor:pointer; font-size:16px;">✕</button></td>
+        </tr>
+    `).join('');
+
+    const total = woItems.reduce((sum, i) => sum + (i.quantity * i.cost_price), 0);
+    document.getElementById('wo-total-cost').innerText = formatMoneyWo(total);
+}
+
+// ========== HISOBDAN CHIQARISHNI YUBORISH ==========
+function submitWriteoff() {
+    const reason = document.getElementById('wo-reason-input').value.trim();
+
+    if (!reason) {
+        showWoError("Sababni kiriting!");
+        return;
+    }
+    if (!woItems.length) {
+        showWoError("Kamida bitta tovar qo'shing!");
+        return;
+    }
+
+    const payload = {
+        reason: reason,
+        items: woItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+    };
+
+    fetch('/api/writeoffs/list/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieWo('csrftoken') },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Saqlashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            toggleWriteoffForm();
+            loadWoHistory();
+        })
+        .catch(err => showWoError(err.message));
+}
+
+// ========== TARIX JADVALI ==========
+function loadWoHistory() {
+    fetch('/api/writeoffs/list/')
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const tbody = document.getElementById('wo-history-body');
+
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding:24px; text-align:center; color:#94a3b8;">Yozuv yo\'q</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(w => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:12px 20px; font-weight:600; color:#1e293b;">№${w.id}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${escapeHtmlWo(w.reason)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${formatDateWo(w.created_at)}</td>
+                    <td style="padding:12px 20px; font-weight:700; color:#ef4444;">${formatMoneyWo(w.total_cost)} so'm</td>
+                </tr>
+            `).join('');
+        })
+        .catch(() => {
+            document.getElementById('wo-history-body').innerHTML =
+                '<tr><td colspan="4" style="padding:24px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+// ========== YORDAMCHI FUNKSIYALAR ==========
+function formatMoneyWo(v) {
+    return Number(v || 0).toLocaleString('uz-UZ');
+}
+
+function formatDateWo(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+}
+
+function escapeHtmlWo(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showWoError(message) {
+    const banner = document.getElementById('writeoff-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookieWo(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_writeoffs();
+</script>

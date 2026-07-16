@@ -1,0 +1,309 @@
+<div style="max-width: 1100px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b;">🕐 Smenalar</h2>
+        <button onclick="refreshShiftsPage()" style="padding:9px 18px; background:white; color:#334155; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">Yangilash</button>
+    </div>
+
+    <div id="shift-action-container">
+        <div style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</div>
+    </div>
+
+    <div id="shift-report-container"></div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden; margin-top:20px;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">OCHILGAN</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">YOPILGAN</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">HOLAT</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SOTUV</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">QAYTARISH</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">FARQ</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">AMALLAR</th>
+                </tr>
+            </thead>
+            <tbody id="shifts-history-body">
+                <tr><td colspan="7" style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function init_shifts() {
+    loadShiftState();
+    loadShiftHistory();
+}
+
+function refreshShiftsPage() {
+    loadShiftState();
+    loadShiftHistory();
+}
+
+// ========== JORIY SMENA HOLATINI YUKLASH ==========
+function loadShiftState() {
+    fetch('/api/sales/shifts/current/')
+        .then(res => res.json())
+        .then(shift => {
+            if (shift && shift.id) {
+                renderCloseShiftForm(shift);
+            } else {
+                renderOpenShiftForm();
+            }
+        })
+        .catch(() => {
+            document.getElementById('shift-action-container').innerHTML =
+                '<div style="padding:20px; text-align:center; color:#ef4444;">Smena holatini yuklab bo\'lmadi</div>';
+        });
+}
+
+function renderOpenShiftForm() {
+    document.getElementById('shift-action-container').innerHTML = `
+        <div style="background:white; border-radius:12px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:end; flex-wrap:wrap; gap:16px;">
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Boshlang'ich naqd (kassadagi pul)</label><br>
+                <input type="number" id="opening-balance-input" value="0" min="0"
+                    style="margin-top:6px; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; width:220px; box-sizing:border-box;">
+            </div>
+            <button onclick="openNewShift()" style="padding:11px 22px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Smenani ochish</button>
+        </div>
+    `;
+}
+
+function renderCloseShiftForm(shift) {
+    document.getElementById('shift-action-container').innerHTML = `
+        <div style="background:white; border-radius:12px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <h3 style="font-size:16px; color:#1e293b; margin-bottom:6px;">Ochiq smenani yopish</h3>
+            <div style="color:#64748b; font-size:14px; margin-bottom:16px;">
+                Ochilgan: ${formatDateTime(shift.opened_at)} · Boshlang'ich naqd: ${formatMoney(shift.opening_balance)} so'm
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:end; flex-wrap:wrap; gap:16px;">
+                <div>
+                    <label style="font-size:13px; color:#64748b; font-weight:600;">Sanab chiqilgan naqd</label><br>
+                    <input type="number" id="closing-balance-input" value="0" min="0"
+                        style="margin-top:6px; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; width:220px; box-sizing:border-box;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="printShiftReport(${shift.id}, 'X-hisobot')" style="padding:11px 18px; background:white; color:#334155; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">X-hisobot chop et</button>
+                    <button onclick="closeCurrentShift(${shift.id})" style="padding:11px 22px; background:#ef4444; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Smenani yopish</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ========== SMENA OCHISH ==========
+function openNewShift() {
+    const opening_balance = document.getElementById('opening-balance-input').value || 0;
+
+    fetch('/api/sales/shifts/open_shift/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({ opening_balance })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Smenani ochishda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            document.getElementById('shift-report-container').innerHTML = '';
+            loadShiftState();
+            loadShiftHistory();
+        })
+        .catch(err => alert(err.message));
+}
+
+// ========== SMENA YOPISH ==========
+function closeCurrentShift(shiftId) {
+    const closing_balance = document.getElementById('closing-balance-input').value || 0;
+    if (!confirm("Smenani yopishni tasdiqlaysizmi?")) return;
+
+    fetch(`/api/sales/shifts/${shiftId}/close_shift/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({ closing_balance })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Smenani yopishda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(report => {
+            renderShiftReportCard(report);
+            renderOpenShiftForm();
+            loadShiftHistory();
+        })
+        .catch(err => alert(err.message));
+}
+
+// ========== SMENA HISOBOTI KARTOCHKASI (sahifada ko'rinadigan) ==========
+function renderShiftReportCard(data) {
+    const farqColor = data.farq >= 0 ? '#16a34a' : '#dc2626';
+    const farqSign = data.farq >= 0 ? '+' : '';
+
+    document.getElementById('shift-report-container').innerHTML = `
+        <div style="background:white; border-radius:12px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-top:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <h3 style="font-size:16px; color:#1e293b; font-weight:700;">Smena hisoboti — ${formatDateTime(data.closed_at || data.opened_at)}</h3>
+                <span style="color:#94a3b8; font-size:13px;">${escapeHtml(data.cashier_name)}</span>
+            </div>
+
+            <div style="font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px; margin-bottom:8px;">SOTUVLAR</div>
+            ${reportRow('Sotuv operatsiyalari', data.sotuv_operatsiyalari + ' ta')}
+            ${reportRow('Sotilgan tovarlar', data.sotilgan_tovarlar + ' dona')}
+            ${reportRow('Sotuv jami', formatMoney(data.sotuv_jami) + " so'm")}
+            ${reportRow('QQS (12%)', formatMoney(data.qqs) + " so'm")}
+
+            <div style="font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px; margin:16px 0 8px;">TO'LOV USULLARI (SOF)</div>
+            ${reportRow('Naqd', formatMoney(data.naqd_sof) + " so'm")}
+            ${reportRow('Karta', formatMoney(data.karta_sof) + " so'm")}
+
+            <div style="font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px; margin:16px 0 8px;">KASSA HISOB-KITOBI (X-HISOBOT)</div>
+            ${reportRow("Boshlang'ich naqd", formatMoney(data.boshlangich_naqd) + " so'm")}
+            ${reportRow('Kutilgan naqd', formatMoney(data.kutilgan_naqd) + " so'm")}
+            ${reportRow('Sanalgan naqd', formatMoney(data.sanalgan_naqd) + " so'm")}
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:14px; border-top:1px solid #e2e8f0;">
+                <span style="font-weight:700; color:#1e293b; font-size:15px;">Farq</span>
+                <span style="font-weight:700; color:${farqColor}; font-size:16px;">${farqSign}${formatMoney(data.farq)} so'm</span>
+            </div>
+        </div>
+    `;
+}
+
+function reportRow(label, value) {
+    return `<div style="display:flex; justify-content:space-between; padding:5px 0; font-size:14px;">
+        <span style="color:#64748b;">${label}</span><span style="color:#1e293b; font-weight:600;">${value}</span>
+    </div>`;
+}
+
+// ========== SMENALAR TARIXI JADVALI ==========
+function loadShiftHistory() {
+    fetch('/api/sales/shifts/')
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const tbody = document.getElementById('shifts-history-body');
+
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding:20px; text-align:center; color:#94a3b8;">Smenalar mavjud emas</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(s => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:12px 20px;">${formatDateTime(s.opened_at)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${s.closed_at ? formatDateTime(s.closed_at) : '—'}</td>
+                    <td style="padding:12px 20px;">${s.is_open
+                        ? '<span style="background:#fef3c7; color:#92400e; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;">Ochiq</span>'
+                        : '<span style="background:#f1f5f9; color:#475569; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;">Yopilgan</span>'}</td>
+                    <td style="padding:12px 20px;">${formatMoney(s.sotuv_jami || 0)}</td>
+                    <td style="padding:12px 20px;">0</td>
+                    <td style="padding:12px 20px;">${(s.farq !== null && s.farq !== undefined) ? formatMoney(s.farq) : '—'}</td>
+                    <td style="padding:12px 20px;"><button onclick="printShiftReport(${s.id}, 'Smena hisoboti')" style="border:none; background:none; color:#1d4ed8; cursor:pointer; font-weight:600; font-size:13px;">Hisobot</button></td>
+                </tr>
+            `).join('');
+        })
+        .catch(() => {
+            document.getElementById('shifts-history-body').innerHTML =
+                '<tr><td colspan="7" style="padding:20px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+// ========== HISOBOTNI CHOP ETISH (X yoki Z) ==========
+function printShiftReport(shiftId, title) {
+    fetch(`/api/sales/shifts/${shiftId}/report/`)
+        .then(res => res.json())
+        .then(data => {
+            const win = window.open('', '_blank', 'width=420,height=650');
+            win.document.write(buildPrintHtml(data, title));
+            win.document.close();
+            win.focus();
+            setTimeout(() => win.print(), 300);
+        })
+        .catch(() => alert("Hisobotni yuklab bo'lmadi"));
+}
+
+function buildPrintHtml(data, title) {
+    const farqSign = data.farq >= 0 ? '+' : '';
+    return `<html><head><meta charset="utf-8"><title>${title}</title>
+        <style>
+            body { font-family: 'Courier New', monospace; padding:16px; font-size:13px; color:#111; }
+            .row { display:flex; justify-content:space-between; margin:4px 0; }
+            h3 { text-align:center; margin-bottom:4px; }
+            .sub { text-align:center; color:#555; font-size:12px; margin-bottom:12px; }
+            hr { border:none; border-top:1px dashed #333; margin:10px 0; }
+            .label { font-weight:bold; }
+        </style></head><body>
+        <h3>${title}</h3>
+        <div class="sub">${escapeHtml(data.cashier_name)}</div>
+        <hr>
+        <div class="row"><span>Ochilgan:</span><span>${formatDateTime(data.opened_at)}</span></div>
+        <div class="row"><span>Yopilgan:</span><span>${data.closed_at ? formatDateTime(data.closed_at) : '—'}</span></div>
+        <hr>
+        <div class="row label"><span>SOTUVLAR</span></div>
+        <div class="row"><span>Sotuv operatsiyalari</span><span>${data.sotuv_operatsiyalari} ta</span></div>
+        <div class="row"><span>Sotilgan tovarlar</span><span>${data.sotilgan_tovarlar} dona</span></div>
+        <div class="row"><span>Sotuv jami</span><span>${formatMoney(data.sotuv_jami)} so'm</span></div>
+        <div class="row"><span>QQS (12%)</span><span>${formatMoney(data.qqs)} so'm</span></div>
+        <hr>
+        <div class="row label"><span>TO'LOV USULLARI (SOF)</span></div>
+        <div class="row"><span>Naqd</span><span>${formatMoney(data.naqd_sof)} so'm</span></div>
+        <div class="row"><span>Karta</span><span>${formatMoney(data.karta_sof)} so'm</span></div>
+        <hr>
+        <div class="row label"><span>KASSA HISOB-KITOBI</span></div>
+        <div class="row"><span>Boshlang'ich naqd</span><span>${formatMoney(data.boshlangich_naqd)} so'm</span></div>
+        <div class="row"><span>Kutilgan naqd</span><span>${formatMoney(data.kutilgan_naqd)} so'm</span></div>
+        <div class="row"><span>Sanalgan naqd</span><span>${formatMoney(data.sanalgan_naqd)} so'm</span></div>
+        <hr>
+        <div class="row label" style="font-size:15px;"><span>Farq</span><span>${farqSign}${formatMoney(data.farq)} so'm</span></div>
+        </body></html>`;
+}
+
+// ========== YORDAMCHI FUNKSIYALAR ==========
+function formatDateTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy}, ${hh}:${min}:${ss}`;
+}
+
+function formatMoney(v) {
+    return Number(v || 0).toLocaleString('uz-UZ');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_shifts();
+</script>

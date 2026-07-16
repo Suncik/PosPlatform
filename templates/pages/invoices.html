@@ -1,0 +1,419 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="font-size:18px; color:#1e293b;">📥 Накладная (tovar kirimi)</h2>
+        <button onclick="toggleNewReceiptForm()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Yangi kirim</button>
+    </div>
+
+    <div id="invoice-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div id="new-receipt-form" style="display:none; background:white; border-radius:12px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px;">
+        <h3 style="font-size:16px; color:#1e293b; margin-bottom:16px; font-weight:700;">Yangi kirim</h3>
+
+        <div style="display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:220px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Yetkazib beruvchi *</label>
+                <select id="receipt-supplier-select" style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <option value="">Tanlang...</option>
+                </select>
+            </div>
+            <div style="flex:1; min-width:220px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Izoh</label>
+                <input type="text" id="receipt-comment-input" style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+        </div>
+
+        <div style="position:relative; margin-bottom:16px;">
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Tovar qo'shish (nom yoki shtrix-kod)</label>
+            <input type="text" id="product-search-input" placeholder="Qidirish..." autocomplete="off"
+                style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            <div id="product-search-results" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:50; max-height:260px; overflow-y:auto;"></div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+            <thead>
+                <tr style="border-bottom:1px solid #e2e8f0; text-align:left;">
+                    <th style="padding:8px 10px; font-size:12px; color:#94a3b8;">TOVAR</th>
+                    <th style="padding:8px 10px; font-size:12px; color:#94a3b8;">MIQDOR</th>
+                    <th style="padding:8px 10px; font-size:12px; color:#94a3b8;">TANNARX</th>
+                    <th style="padding:8px 10px; font-size:12px; color:#94a3b8;">PARTIYA №</th>
+                    <th style="padding:8px 10px; font-size:12px; color:#94a3b8;">MUDDATI</th>
+                    <th style="padding:8px 10px; font-size:12px; color:#94a3b8;">SUMMA</th>
+                    <th style="padding:8px 10px;"></th>
+                </tr>
+            </thead>
+            <tbody id="draft-items-body">
+                <tr><td colspan="7" style="padding:14px 10px; color:#94a3b8;">Tovar qo'shilmagan</td></tr>
+            </tbody>
+        </table>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+            <div style="font-size:16px; font-weight:700; color:#1e293b;">Jami: <span id="draft-total-label">0</span> so'm</div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="printDraftLabels()" style="padding:10px 18px; background:white; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">🏷️ Yorliq chop</button>
+                <button onclick="saveReceipt()" style="padding:10px 20px; background:#16a34a; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Saqlash (omborga qo'shish)</button>
+            </div>
+        </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">№</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">YETKAZIB BERUVCHI</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SANA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SUMMA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">IZOH</th>
+                </tr>
+            </thead>
+            <tbody id="receipts-history-body">
+                <tr><td colspan="5" style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
+<script>
+let draftItems = [];
+let allReceiptsList = [];
+let expandedReceiptId = null;
+let searchDebounceTimer = null;
+
+function init_invoices() {
+    loadSuppliersForReceipt();
+    loadReceiptsHistory();
+
+    document.getElementById('product-search-input').addEventListener('keyup', function () {
+        clearTimeout(searchDebounceTimer);
+        const q = this.value.trim();
+        if (q.length < 1) {
+            document.getElementById('product-search-results').style.display = 'none';
+            return;
+        }
+        searchDebounceTimer = setTimeout(() => searchProductsForReceipt(q), 350);
+    });
+
+    document.addEventListener('click', function (e) {
+        const box = document.getElementById('product-search-results');
+        const input = document.getElementById('product-search-input');
+        if (box && !box.contains(e.target) && e.target !== input) {
+            box.style.display = 'none';
+        }
+    });
+}
+
+function toggleNewReceiptForm() {
+    const form = document.getElementById('new-receipt-form');
+    form.style.display = (form.style.display === 'none' || !form.style.display) ? 'block' : 'none';
+}
+
+function loadSuppliersForReceipt() {
+    fetch('/api/suppliers/list/')
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const sel = document.getElementById('receipt-supplier-select');
+            sel.innerHTML = '<option value="">Tanlang...</option>' +
+                list.map(s => `<option value="${s.id}">${escapeHtmlInv(s.name)}</option>`).join('');
+        })
+        .catch(() => {});
+}
+
+function searchProductsForReceipt(query) {
+    fetch(`/api/products/list/?search=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const box = document.getElementById('product-search-results');
+
+            if (!list.length) {
+                box.innerHTML = '<div style="padding:12px 14px; color:#94a3b8; font-size:14px;">Mahsulot topilmadi</div>';
+                box.style.display = 'block';
+                return;
+            }
+
+            box.innerHTML = list.map(p => `
+                <div onclick="addDraftItem(${p.id})" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; font-size:14px;"
+                    onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                    <span style="font-weight:600; color:#1e293b;">${escapeHtmlInv(p.name)}</span>
+                    <span style="color:#94a3b8; margin-left:8px;">Qoldiq: ${p.stock} · Tannarx: ${p.cost_price}</span>
+                </div>
+            `).join('');
+            box.style.display = 'block';
+        })
+        .catch(() => {});
+}
+
+function addDraftItem(productId) {
+    fetch(`/api/products/list/${productId}/`)
+        .then(res => res.json())
+        .then(p => {
+            draftItems.push({
+                product_id: p.id,
+                product_name: p.name,
+                quantity: 1,
+                cost_price: parseFloat(p.cost_price) || 0,
+                batch_number: '',
+                expiry_date: '',
+            });
+            document.getElementById('product-search-input').value = '';
+            document.getElementById('product-search-results').style.display = 'none';
+            renderDraftItems();
+        });
+}
+
+function renderDraftItems() {
+    const body = document.getElementById('draft-items-body');
+
+    if (!draftItems.length) {
+        body.innerHTML = '<tr><td colspan="7" style="padding:14px 10px; color:#94a3b8;">Tovar qo\u2019shilmagan</td></tr>';
+        updateDraftTotal();
+        return;
+    }
+
+    body.innerHTML = draftItems.map((item, idx) => `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:8px 10px; font-weight:600; color:#1e293b;">${escapeHtmlInv(item.product_name)}</td>
+            <td style="padding:8px 10px;">
+                <input type="number" min="0" step="0.001" value="${item.quantity}" onchange="updateDraftItem(${idx}, 'quantity', this.value)"
+                    style="width:80px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px;">
+            </td>
+            <td style="padding:8px 10px;">
+                <input type="number" min="0" step="0.01" value="${item.cost_price}" onchange="updateDraftItem(${idx}, 'cost_price', this.value)"
+                    style="width:90px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px;">
+            </td>
+            <td style="padding:8px 10px;">
+                <input type="text" value="${item.batch_number}" onchange="updateDraftItem(${idx}, 'batch_number', this.value)"
+                    style="width:90px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px;">
+            </td>
+            <td style="padding:8px 10px;">
+                <input type="date" value="${item.expiry_date}" onchange="updateDraftItem(${idx}, 'expiry_date', this.value)"
+                    style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px;">
+            </td>
+            <td style="padding:8px 10px; font-weight:700;">${(item.quantity * item.cost_price).toFixed(2)}</td>
+            <td style="padding:8px 10px;">
+                <button onclick="removeDraftItem(${idx})" style="border:none; background:none; color:#ef4444; cursor:pointer; font-size:16px;">✕</button>
+            </td>
+        </tr>
+    `).join('');
+
+    updateDraftTotal();
+}
+
+function updateDraftItem(idx, field, value) {
+    if (field === 'quantity' || field === 'cost_price') {
+        draftItems[idx][field] = parseFloat(value) || 0;
+    } else {
+        draftItems[idx][field] = value;
+    }
+    renderDraftItems();
+}
+
+function removeDraftItem(idx) {
+    draftItems.splice(idx, 1);
+    renderDraftItems();
+}
+
+function updateDraftTotal() {
+    const total = draftItems.reduce((sum, item) => sum + (item.quantity * item.cost_price), 0);
+    document.getElementById('draft-total-label').innerText = total.toLocaleString('uz-UZ');
+}
+
+function saveReceipt() {
+    const supplierId = document.getElementById('receipt-supplier-select').value;
+    const comment = document.getElementById('receipt-comment-input').value.trim();
+
+    if (!supplierId) {
+        showInvoiceError("Yetkazib beruvchini tanlang!");
+        return;
+    }
+    if (!draftItems.length) {
+        showInvoiceError("Tovar qo\u2019shing");
+        return;
+    }
+
+    const payload = {
+        supplier: supplierId,
+        comment: comment || null,
+        items: draftItems.map(item => ({
+            product: item.product_id,
+            quantity: item.quantity,
+            cost_price: item.cost_price,
+            batch_number: item.batch_number || null,
+            expiry_date: item.expiry_date || null,
+        })),
+    };
+
+    fetch('/api/invoices/list/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieInv('csrftoken') },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const firstError = Object.values(err)[0];
+                throw new Error(Array.isArray(firstError) ? firstError[0] : (err.error || "Saqlashda xatolik yuz berdi"));
+            }
+            return res.json();
+        })
+        .then(() => {
+            draftItems = [];
+            renderDraftItems();
+            document.getElementById('receipt-comment-input').value = '';
+            document.getElementById('receipt-supplier-select').value = '';
+            document.getElementById('new-receipt-form').style.display = 'none';
+            loadReceiptsHistory();
+        })
+        .catch(err => showInvoiceError(err.message));
+}
+
+function printDraftLabels() {
+    if (!draftItems.length) {
+        showInvoiceError("Chop etish uchun avval tovar qo\u2019shing");
+        return;
+    }
+
+    const win = window.open('', '_blank', 'width=420,height=600');
+    let bodyHtml = '<html><head><meta charset="utf-8"><title>Yorliqlar</title></head><body style="font-family:sans-serif;">';
+    draftItems.forEach((item, idx) => {
+        bodyHtml += `
+            <div style="text-align:center; padding:14px; border-bottom:1px dashed #999; page-break-after:always;">
+                <div style="font-weight:bold; margin-bottom:6px;">${escapeHtmlInv(item.product_name)}</div>
+                <svg id="barcode-${idx}"></svg>
+                <div style="font-size:16px; font-weight:bold;">${item.cost_price} so'm</div>
+            </div>`;
+    });
+    bodyHtml += '</body></html>';
+
+    win.document.write(bodyHtml);
+    win.document.close();
+
+    win.onload = function () {
+        draftItems.forEach((item, idx) => {
+            const el = win.document.getElementById(`barcode-${idx}`);
+            if (el) {
+                try {
+                    win.JsBarcode(el, String(item.product_id).padStart(8, '0'), { width: 2, height: 50 });
+                } catch (e) {}
+            }
+        });
+        setTimeout(() => win.print(), 400);
+    };
+}
+
+function loadReceiptsHistory() {
+    fetch('/api/invoices/list/')
+        .then(res => res.json())
+        .then(data => {
+            allReceiptsList = data.results || data;
+            renderReceiptsHistory();
+        })
+        .catch(() => {
+            document.getElementById('receipts-history-body').innerHTML =
+                '<tr><td colspan="5" style="padding:20px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+function renderReceiptsHistory() {
+    const body = document.getElementById('receipts-history-body');
+
+    if (!allReceiptsList.length) {
+        body.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:#94a3b8;">Накладная mavjud emas</td></tr>';
+        return;
+    }
+
+    let rowsHtml = '';
+    allReceiptsList.forEach(r => {
+        const isExpanded = (expandedReceiptId === r.id);
+        rowsHtml += `
+            <tr onclick="toggleReceiptExpand(${r.id})" style="border-top:1px solid #f1f5f9; cursor:pointer;">
+                <td style="padding:12px 20px; font-weight:700; color:#1e293b;">${escapeHtmlInv(r.number)}</td>
+                <td style="padding:12px 20px;">${escapeHtmlInv(r.supplier_name)}</td>
+                <td style="padding:12px 20px; color:#64748b;">${formatDateTimeInv(r.created_at)}</td>
+                <td style="padding:12px 20px; font-weight:700;">${Number(r.total_amount).toLocaleString('uz-UZ')}</td>
+                <td style="padding:12px 20px; color:#64748b;">${r.comment ? escapeHtmlInv(r.comment) : '—'}</td>
+            </tr>`;
+
+        if (isExpanded) {
+            let itemsHtml = `
+                <tr><td colspan="5" style="padding:0;">
+                    <table style="width:100%; border-collapse:collapse; background:#f8fafc;">
+                        <thead>
+                            <tr style="text-align:left;">
+                                <th style="padding:10px 20px; font-size:12px; color:#94a3b8;">TOVAR</th>
+                                <th style="padding:10px 20px; font-size:12px; color:#94a3b8;">MIQDOR</th>
+                                <th style="padding:10px 20px; font-size:12px; color:#94a3b8;">TANNARX</th>
+                                <th style="padding:10px 20px; font-size:12px; color:#94a3b8;">PARTIYA</th>
+                                <th style="padding:10px 20px; font-size:12px; color:#94a3b8;">MUDDATI</th>
+                                <th style="padding:10px 20px; font-size:12px; color:#94a3b8;">SUMMA</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            r.items.forEach(item => {
+                itemsHtml += `
+                    <tr style="border-top:1px solid #e2e8f0;">
+                        <td style="padding:10px 20px;">${escapeHtmlInv(item.product_name)}</td>
+                        <td style="padding:10px 20px;">${item.quantity}</td>
+                        <td style="padding:10px 20px;">${item.cost_price}</td>
+                        <td style="padding:10px 20px; color:#94a3b8;">${item.batch_number ? escapeHtmlInv(item.batch_number) : '—'}</td>
+                        <td style="padding:10px 20px; color:#94a3b8;">${item.expiry_date ? item.expiry_date : '—'}</td>
+                        <td style="padding:10px 20px; font-weight:700;">${item.line_total}</td>
+                    </tr>`;
+            });
+            itemsHtml += `</tbody></table></td></tr>`;
+            rowsHtml += itemsHtml;
+        }
+    });
+
+    body.innerHTML = rowsHtml;
+}
+
+function toggleReceiptExpand(id) {
+    expandedReceiptId = (expandedReceiptId === id) ? null : id;
+    renderReceiptsHistory();
+}
+
+function formatDateTimeInv(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy}, ${hh}:${min}`;
+}
+
+function escapeHtmlInv(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showInvoiceError(message) {
+    const banner = document.getElementById('invoice-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookieInv(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_invoices();
+</script>

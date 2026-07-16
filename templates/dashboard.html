@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">     
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PosPlatform — Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; background-color: #f8fafc; color: #334155; height: 100vh; overflow: hidden; }
+
+        /* Sidebar Uslublari */
+        .sidebar { width: 260px; background-color: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between; padding: 20px 0; }
+        .logo-section { padding: 0 20px; margin-bottom: 20px; font-size: 22px; font-weight: bold; color: #1e40af; display: flex; align-items: center; gap: 10px; }
+        
+        /* Skroll bo'ladigan menyu qismi */
+        .menu-container { flex-grow: 1; overflow-y: auto; padding: 0 10px; }
+        .menu-list { list-style: none; }
+        .menu-item a { display: flex; align-items: center; gap: 12px; padding: 10px 15px; color: #64748b; text-decoration: none; font-weight: 500; font-size: 14px; border-radius: 8px; transition: all 0.2s; margin-bottom: 4px; }
+        .menu-item.active a, .menu-item a:hover { background-color: #eff6ff; color: #1d4ed8; }
+{% comment %}         
+      #  .user-info { padding: 20px; border-top: 1px solid #e2e8f0; font-size: 14px; background: #fff; } {% endcomment %}
+      /* Sidebar foydalanuvchi bloki konteyneri */
+.sidebar-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Tilni tanlash tugmalari (UZ / RU) */
+.lang-switcher {
+    display: flex;
+    background-color: #f1f5f9;
+    border-radius: 6px;
+    padding: 2px;
+    border: 1px solid #e2e8f0;
+}
+.lang-btn {
+    flex: 1;
+    padding: 6px 0;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #64748b;
+    border-radius: 4px;
+    text-align: center;
+    transition: all 0.2s;
+}
+.lang-btn.active {
+    background-color: #1d4ed8;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Foydalanuvchi nomi va roli */
+.user-profile-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+.username-text {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+.role-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    background-color: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Chiqish tugmasi */
+.logout-action-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #ffffff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.logout-action-btn:hover {
+    background-color: #f8fafc;
+    color: #ef4444;
+    border-color: #fca5a5;
+}
+        .logout-btn { display: block; width: 100%; padding: 8px; margin-top: 10px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; text-align: center; text-decoration: none; font-size: 12px; font-weight: bold; }
+
+        /* Asosiy Oyna Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { background-color: #ffffff; padding: 15px 30px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; min-height: 65px; }
+        .header h1 { font-size: 20px; color: #1e293b; }
+
+        /* Dynamic Kontent Yuklanadigan Joy */
+        .content-body { padding: 30px; flex: 1; overflow-y: auto; }
+        
+        /* Glavniy Statistika Grid elementlari */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-top: 20px; }
+        .stat-card { background-color: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .stat-title { font-size: 13px; color: #64748b; font-weight: 500; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #1e293b; }
+        .value-blue { color: #1d4ed8; } .value-green { color: #22c55e; } .value-orange { color: #f97316; } .value-red { color: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <div class="logo-section">☁️ PosPlatform</div>
+            <div class="menu-container">
+                <ul class="menu-list">
+                    <li class="menu-item active" data-target="dashboard"><a href="#">📊 Главный</a></li>
+                    <li class="menu-item" data-target="stores"><a href="#">🏪 Do'konlar</a></li>
+                    <li class="menu-item" data-target="products"><a href="#">📦 Mahsulotlar</a></li>
+                    <li class="menu-item" data-target="categories"><a href="#">🏷️ Kategoriyalar</a></li>
+                    <li class="menu-item" data-target="sales"><a href="#">🛒 Savdolar</a></li>
+                    <li class="menu-item" data-target="shifts"><a href="#">⏱️ Smena</a></li>
+                    <li class="menu-item" data-target="suppliers"><a href="#">🚚 Yetkazib beruvchilar</a></li>
+                    <li class="menu-item" data-target="invoices"><a href="#">📄 Nakladnaya</a></li>
+                    <li class="menu-item" data-target="debts"><a href="#">📕 Qarzdorlar</a></li>
+                    <li class="menu-item" data-target="expenses"><a href="#">📉 Xarajatlar</a></li>
+                    <li class="menu-item" data-target="payments"><a href="#">💳 Plateji</a></li>
+                    <li class="menu-item" data-target="inventory"><a href="#">🔢 Inventarizatsiya</a></li>
+                   
+                    <li class="menu-item" data-target="analytics"><a href="#">📈 Analitika</a></li>
+                    <li class="menu-item" data-target="reports"><a href="#">📊 Hisobotlar</a></li>
+                    <li class="menu-item" data-target="promotions"><a href="#">🏷️ Aksiyalar</a></li>
+                    <li class="menu-item" data-target="transfer"><a href="#">🔄 Transfer</a></li>
+                    <li class="menu-item" data-target="cashflow"><a href="#">💹 Kassa harakati</a></li>
+                    <li class="menu-item" data-target="customers"><a href="#">🧑‍🤝‍🧑 Mijozlar</a></li>
+                    <li class="menu-item" data-target="writeoffs"><a href="#">🗑️ Spicanie</a></li>
+                    <li class="menu-item" data-target="users"><a href="#">👥 Foydalanuvchilar</a></li>
+                    <li class="menu-item" data-target="roles"><a href="#">🔑 Rollar</a></li>
+                    <li class="menu-item" data-target="settings"><a href="#">⚙️ Sozlamalar</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="lang-switcher">
+                <button class="lang-btn active" onclick="changeLanguage('uz')">UZ</button>
+                <button class="lang-btn" onclick="changeLanguage('ru')">RU</button>
+            </div>
+        
+            <div class="user-profile-box">
+                <div class="user-details">
+                    <span class="username-text" title="{{ request.user.username }}">{{ request.user.username|default:"xuajadmin" }}</span>
+                </div>
+                <span class="role-badge">{{ request.user.role|default:"ADMIN" }}</span>
+            </div>
+        
+            <a href="#" onclick="handleLogout(event)" class="logout-action-btn">Chiqish</a>
+
+            <form id="logout-form" action="/admin/logout/" method="post" style="display: none;">
+                {% csrf_token %}
+            </form>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1 id="page-title">Главный (Dashboard)</h1>
+            <div style="color: #64748b; font-size: 14px;" id="current-date">--/--/----</div>
+        </div>
+
+        <div class="content-body" id="dynamic-content">
+            <div class="stats-grid">
+                <div class="stat-card"><span class="stat-title">📝 Jami sotuv (dona)</span><span class="stat-value value-blue" id="total-sales">0</span></div>
+                <div class="stat-card"><span class="stat-title">💵 Naqd kirim</span><span class="stat-value value-green" id="cash-income">0 so'm</span></div>
+                <div class="stat-card"><span class="stat-title">💳 Karta kirim</span><span class="stat-value value-blue" id="card-income">0 so'm</span></div>
+                <div class="stat-card"><span class="stat-title">🔄 Qaytarishlar</span><span class="stat-value value-orange" id="returns-count">0</span></div>
+                <div class="stat-card"><span class="stat-title">📕 Qarzlar</span><span class="stat-value value-red" id="debts-amount">0 so'm</span></div>
+                <div class="stat-card"><span class="stat-title">📉 Xarajatlar</span><span class="stat-value value-red" id="expenses-amount">0 so'm</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Bugungi sana
+            if (document.getElementById('current-date')) {
+                document.getElementById('current-date').innerText = new Date().toLocaleDateString('uz-UZ');
+            }
+            
+            // Dastlabki statistikani yuklash
+            loadDashboardStats();
+        
+            // Menyularni bosishni kuzatish (Event Delegation)
+            const menuList = document.querySelector('.menu-list');
+            if (menuList) {
+                menuList.addEventListener('click', function(e) {
+                    const menuItem = e.target.closest('.menu-item');
+                    if (!menuItem) return;
+                    
+                    e.preventDefault();
+                    
+                    // Aktiv menyu stilini o'zgartirish
+                    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+                    menuItem.classList.add('active');
+                    
+                    // Qaysi sahifa bosilganini aniqlash
+                    const targetPage = menuItem.getAttribute('data-target');
+                    switchPage(targetPage, menuItem.innerText);
+                });
+            }
+        });
+        
+        // 📊 BOSH SAHIFA STATISTIKASINI YUKLASH FUNKSIYASI
+        function loadDashboardStats() {
+            fetch('/api/sales/dashboard-stats/') 
+                .then(response => response.json())
+                .then(data => {
+                    if (document.getElementById('total-sales')) document.getElementById('total-sales').innerText = data.total_sales || 0;
+                    if (document.getElementById('cash-income')) document.getElementById('cash-income').innerText = (data.cash_income || 0) + " so'm";
+                    if (document.getElementById('card-income')) document.getElementById('card-income').innerText = (data.card_income || 0) + " so'm";
+                    if (document.getElementById('returns-count')) document.getElementById('returns-count').innerText = data.returns || 0;
+                    if (document.getElementById('debts-amount')) document.getElementById('debts-amount').innerText = (data.debts || 0) + " so'm";
+                    if (document.getElementById('expenses-amount')) document.getElementById('expenses-amount').innerText = (data.expenses || 0) + " so'm";
+                })
+                .catch(err => console.error("Statistika yuklashda xato:", err));
+        }
+        
+        // 🔀 DYNAMIC SAHIFALARNI ALMASHTIRISH FUNKSIYASI
+        function switchPage(pageKey, pageTitle) {
+            if (document.getElementById('page-title')) {
+                document.getElementById('page-title').innerText = pageTitle;
+            }
+            const container = document.getElementById('dynamic-content');
+            if (!container) return;
+            
+            container.innerHTML = `<div style="text-align:center; padding:50px; color:#64748b;">Sahifa yuklanmoqda...</div>`;
+        
+            if (pageKey === 'dashboard') {
+                container.innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card"><span class="stat-title">📝 Jami sotuv (dona)</span><span class="stat-value value-blue" id="total-sales">0</span></div>
+                        <div class="stat-card"><span class="stat-title">💵 Naqd kirim</span><span class="stat-value value-green" id="cash-income">0 so'm</span></div>
+                        <div class="stat-card"><span class="stat-title">💳 Karta kirim</span><span class="stat-value value-blue" id="card-income">0 so'm</span></div>
+                        <div class="stat-card"><span class="stat-title">🔄 Qaytarishlar</span><span class="stat-value value-orange" id="returns-count">0</span></div>
+                        <div class="stat-card"><span class="stat-title">📕 Qarzlar</span><span class="stat-value value-red" id="debts-amount">0 so'm</span></div>
+                        <div class="stat-card"><span class="stat-title">📉 Xarajatlar</span><span class="stat-value value-red" id="expenses-amount">0 so'm</span></div>
+                    </div>`;
+                loadDashboardStats();
+                return;
+            }
+        
+            // Dynamic fetch endi aniq /dashboard/pages/categories/ manziliga boradi
+            fetch(`/dashboard/pages/${pageKey}/`)
+            .then(response => {
+                if(!response.ok) throw new Error("Sahifa topilmadi yoki yuklashda xato.");
+                return response.text();
+            })
+            .then(html => {
+                container.innerHTML = html;
+                // 🔧 MUHIM: innerHTML orqali qo'yilgan <script> teglar avtomatik
+                // ishlamaydi, shuning uchun ularni qo'lda topib, qayta yaratib ishga tushiramiz
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    if (oldScript.src) {
+                        newScript.src = oldScript.src;
+                    } else {
+                        newScript.textContent = oldScript.textContent;
+                    }
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            })
+            .catch(err => {
+                container.innerHTML = `<div style="text-align:center; padding:50px; color:#ef4444;">❌ Xatolik yuz berdi: ${err.message}</div>`;
+            });
+        }
+        
+        // 🌐 TILNI POST FORMA ORQALI BACKENDGA YUBORISH
+        function changeLanguage(lang) {
+            const langForm = document.getElementById('lang-form');
+            const langInput = document.getElementById('lang-input');
+            if (langForm && langInput) {
+                langInput.value = lang;
+                langForm.submit();
+            } else {
+                console.log(`Til o'zgartirildi: ${lang} (Forma topilmadi)`);
+            }
+        }
+        
+        // 🚪 POST FORMA ORQALI TIZIMDAN CHIQISH (Django 6 standarti)
+        function handleLogout(event) {
+            event.preventDefault();
+            if (confirm("Tizimdan chiqishni xohlaysizmi?")) {
+                const logoutForm = document.getElementById('logout-form');
+                if (logoutForm) {
+                    logoutForm.submit();
+                } else {
+                    window.location.href = '/admin/logout/';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

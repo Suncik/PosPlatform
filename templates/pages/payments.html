@@ -1,0 +1,116 @@
+<div>
+    <div style="margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b; font-weight:700;">Kassalar</h2>
+        <div style="color:#64748b; font-size:14px; margin-top:4px;">Do'konlar va kassalar holati</div>
+    </div>
+
+    <div style="background:white; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px;">
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px;">
+            <select id="kassa-store-filter" onchange="loadKassaList()"
+                style="flex:1; min-width:220px; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;">
+                <option value="">Barcha do'konlar</option>
+            </select>
+            <select id="kassa-status-filter" onchange="loadKassaList()"
+                style="flex:1; min-width:220px; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;">
+                <option value="">Barcha holat</option>
+                <option value="true">Aktiv</option>
+                <option value="false">O'chiq</option>
+            </select>
+        </div>
+        <div style="text-align:right; color:#64748b; font-size:14px;">
+            Jami kassalar: <b id="kassa-total-count" style="color:#1e293b;">0</b>
+        </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">DO'KON</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">BALANS</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">KASSA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">HOLAT</th>
+                </tr>
+            </thead>
+            <tbody id="kassa-table-body">
+                <tr><td colspan="4" style="padding:24px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function init_payments() {
+    loadStoreFilterOptions();
+    loadKassaList();
+}
+
+// ========== DO'KONLAR FILTRINI TO'LDIRISH ==========
+function loadStoreFilterOptions() {
+    fetch('/api/stores/list/')
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const select = document.getElementById('kassa-store-filter');
+            list.forEach(store => {
+                const opt = document.createElement('option');
+                opt.value = store.id;
+                opt.textContent = store.name;
+                select.appendChild(opt);
+            });
+        })
+        .catch(() => {});
+}
+
+// ========== KASSALAR RO'YXATINI YUKLASH ==========
+function loadKassaList() {
+    const storeId = document.getElementById('kassa-store-filter').value;
+    const status = document.getElementById('kassa-status-filter').value;
+
+    const params = new URLSearchParams();
+    if (storeId) params.set('store', storeId);
+    if (status) params.set('is_active', status);
+
+    const tbody = document.getElementById('kassa-table-body');
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:24px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>';
+
+    fetch(`/api/payments/list/?${params.toString()}`)
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            document.getElementById('kassa-total-count').innerText = list.length;
+
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding:24px; text-align:center; color:#94a3b8;">Kassa yo\'q</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(k => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:12px 20px; font-weight:600; color:#1e293b;">${escapeHtmlPay(k.store_name)}</td>
+                    <td style="padding:12px 20px; color:#1e293b; font-weight:600;">${formatMoneyPay(k.balance)} so'm</td>
+                    <td style="padding:12px 20px; color:#64748b;">${escapeHtmlPay(k.name)}</td>
+                    <td style="padding:12px 20px;">${k.is_active
+                        ? '<span style="background:#dcfce7; color:#16a34a; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;">Aktiv</span>'
+                        : '<span style="background:#fee2e2; color:#dc2626; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;">O\'chiq</span>'}</td>
+                </tr>
+            `).join('');
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr><td colspan="4" style="padding:24px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+function formatMoneyPay(v) {
+    return Number(v || 0).toLocaleString('uz-UZ');
+}
+
+function escapeHtmlPay(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+init_payments();
+</script>

@@ -1,0 +1,262 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <h2 style="font-size:18px; color:#1e293b;">🚚 Yetkazib beruvchilar</h2>
+        <button onclick="openAddSupplierModal()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Yetkazuvchi qo'shish</button>
+    </div>
+    <div id="suppliers-count-label" style="color:#64748b; font-size:13px; margin-bottom:16px;"></div>
+
+    <div id="supplier-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div style="margin-bottom:16px;">
+        <input type="text" id="supplier-search-input" placeholder="Nomi yoki telefon bo'yicha qidirish"
+            style="width:100%; max-width:500px; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <thead>
+            <tr style="background:#f8fafc; text-align:left;">
+                <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">NOMI</th>
+                <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">MAS'UL SHAXS</th>
+                <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">TELEFON</th>
+                <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">QARZ (BALANS)</th>
+                <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">HOLAT</th>
+                <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">AMAL</th>
+            </tr>
+        </thead>
+        <tbody id="suppliers-table-body">
+            <tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="supplier-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(30,41,59,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; width:420px; max-width:90%; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #e2e8f0;">
+            <h3 id="supplier-modal-title" style="font-size:18px; color:#1e293b; font-weight:700;">Yangi yetkazib beruvchi</h3>
+            <span onclick="closeSupplierModal()" style="cursor:pointer; font-size:20px; color:#64748b;">✕</span>
+        </div>
+
+        <div style="padding:24px;">
+            <input type="hidden" id="supplier-id-input">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Nomi *</label>
+            <input type="text" id="supplier-name-input" placeholder=""
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Mas'ul shaxs</label>
+            <input type="text" id="supplier-contact-input" placeholder="To'liq ismi"
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Telefon</label>
+            <input type="text" id="supplier-phone-input" placeholder="+998..."
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <label style="font-size:13px; color:#64748b; font-weight:600;">Manzil</label>
+            <input type="text" id="supplier-address-input" placeholder=""
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:20px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+            <div id="supplier-modal-error" style="display:none; color:#ef4444; font-size:13px; margin-bottom:12px;"></div>
+
+            <div style="display:flex; gap:10px;">
+                <button id="supplier-save-btn" onclick="saveSupplier()"
+                    style="flex:1; padding:12px; background:#1d4ed8; color:white; border:none; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer;">
+                    Qo'shish
+                </button>
+                <button onclick="closeSupplierModal()"
+                    style="flex:1; padding:12px; background:white; color:#334155; border:1px solid #cbd5e1; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer;">
+                    Bekor
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentSuppliersList = [];
+
+function init_suppliers() {
+    loadSuppliersList();
+    document.getElementById('supplier-search-input').addEventListener('keyup', debounceSupplier(loadSuppliersList, 400));
+}
+
+function debounceSupplier(fn, delay) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), delay);
+    };
+}
+
+function loadSuppliersList() {
+    const search = document.getElementById('supplier-search-input').value.trim();
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+
+    fetch(`/api/suppliers/list/${query}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Server xatosi: ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            const list = data.results || data;
+            currentSuppliersList = list;
+            document.getElementById('suppliers-count-label').innerText = `${list.length} ta yetkazuvchi`;
+
+            const body = document.getElementById('suppliers-table-body');
+            if (!list.length) {
+                body.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Yetkazib beruvchilar mavjud emas</td></tr>';
+                return;
+            }
+
+            body.innerHTML = list.map(s => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:14px 20px; font-weight:700; color:#1e293b;">${escapeHtmlSupplier(s.name)}</td>
+                    <td style="padding:14px 20px; color:#334155;">${s.contact_person ? escapeHtmlSupplier(s.contact_person) : '—'}</td>
+                    <td style="padding:14px 20px; color:#334155;">${s.phone ? escapeHtmlSupplier(s.phone) : '—'}</td>
+                    <td style="padding:14px 20px; color:#334155;">${s.balance || 0}</td>
+                    <td style="padding:14px 20px;">${s.is_active
+                        ? '<span style="background:#dcfce7; color:#16a34a; font-size:12px; font-weight:700; padding:4px 12px; border-radius:999px;">Aktiv</span>'
+                        : '<span style="background:#f1f5f9; color:#64748b; font-size:12px; font-weight:700; padding:4px 12px; border-radius:999px;">O&#39;chiq</span>'}</td>
+                    <td style="padding:14px 20px; white-space:nowrap;">
+                        <button onclick="showSupplierPaymentsPlaceholder()" title="To'lovlar / balans" style="margin-right:6px; border:1px solid #e2e8f0; background:white; width:32px; height:32px; border-radius:8px; cursor:pointer;">💳</button>
+                        <button onclick="openEditSupplierModalById(${s.id})" title="Tahrirlash" style="margin-right:6px; border:1px solid #e2e8f0; background:white; width:32px; height:32px; border-radius:8px; cursor:pointer;">✏️</button>
+                        <button onclick="toggleSupplierActive(${s.id})" title="${s.is_active ? 'Faolsizlantirish' : 'Faollashtirish'}"
+                            style="border:none; background:${s.is_active ? '#ef4444' : '#22c55e'}; color:white; width:32px; height:32px; border-radius:50%; cursor:pointer;">●</button>
+                    </td>
+                </tr>`).join('');
+        })
+        .catch(err => {
+            document.getElementById('suppliers-table-body').innerHTML =
+                `<tr><td colspan="6" style="padding:20px; text-align:center; color:#ef4444;">Xatolik: ${err.message}</td></tr>`;
+        });
+}
+
+function showSupplierPaymentsPlaceholder() {
+    alert("To'lovlar tarixi — keyingi bosqichda (Накладная moduli bilan birga)");
+}
+
+function escapeHtmlSupplier(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function resetSupplierForm() {
+    document.getElementById('supplier-id-input').value = '';
+    document.getElementById('supplier-name-input').value = '';
+    document.getElementById('supplier-contact-input').value = '';
+    document.getElementById('supplier-phone-input').value = '';
+    document.getElementById('supplier-address-input').value = '';
+    document.getElementById('supplier-modal-error').style.display = 'none';
+}
+
+function openAddSupplierModal() {
+    resetSupplierForm();
+    document.getElementById('supplier-modal-title').innerText = "Yangi yetkazib beruvchi";
+    document.getElementById('supplier-save-btn').innerText = "Qo'shish";
+    document.getElementById('supplier-modal-overlay').style.display = 'flex';
+}
+
+function openEditSupplierModalById(id) {
+    const s = currentSuppliersList.find(item => item.id === id);
+    if (!s) return;
+    resetSupplierForm();
+    document.getElementById('supplier-modal-title').innerText = 'Tahrirlash';
+    document.getElementById('supplier-save-btn').innerText = 'Saqlash';
+    document.getElementById('supplier-id-input').value = s.id;
+    document.getElementById('supplier-name-input').value = s.name;
+    document.getElementById('supplier-contact-input').value = s.contact_person || '';
+    document.getElementById('supplier-phone-input').value = s.phone || '';
+    document.getElementById('supplier-address-input').value = s.address || '';
+    document.getElementById('supplier-modal-overlay').style.display = 'flex';
+}
+
+function closeSupplierModal() {
+    document.getElementById('supplier-modal-overlay').style.display = 'none';
+}
+
+function saveSupplier() {
+    const id = document.getElementById('supplier-id-input').value;
+    const name = document.getElementById('supplier-name-input').value.trim();
+    const errorBox = document.getElementById('supplier-modal-error');
+
+    if (!name) {
+        errorBox.innerText = "Nomi majburiy!";
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    const payload = {
+        name: name,
+        contact_person: document.getElementById('supplier-contact-input').value.trim() || null,
+        phone: document.getElementById('supplier-phone-input').value.trim() || null,
+        address: document.getElementById('supplier-address-input').value.trim() || null,
+    };
+
+    const isEdit = !!id;
+    const url = isEdit ? `/api/suppliers/list/${id}/` : '/api/suppliers/list/';
+    const method = isEdit ? 'PATCH' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookieSupplier('csrftoken'),
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const firstError = Object.values(err)[0];
+                throw new Error(Array.isArray(firstError) ? firstError[0] : "Saqlashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            closeSupplierModal();
+            loadSuppliersList();
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.style.display = 'block';
+        });
+}
+
+function toggleSupplierActive(id) {
+    fetch(`/api/suppliers/list/${id}/toggle_active/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookieSupplier('csrftoken') }
+    })
+        .then(res => {
+            if (!res.ok) throw new Error("Holatni o'zgartirishda xatolik yuz berdi");
+            return res.json();
+        })
+        .then(() => loadSuppliersList())
+        .catch(err => showSupplierError(err.message));
+}
+
+function showSupplierError(message) {
+    const banner = document.getElementById('supplier-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookieSupplier(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_suppliers();
+</script>

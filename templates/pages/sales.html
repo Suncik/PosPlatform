@@ -1,0 +1,132 @@
+<div style="max-width: 1200px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+        <h2 style="font-size:18px; color:#1e293b;">🛒 Kunlik savdolar</h2>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <button onclick="changeSalesDate(-1)" style="width:34px; height:34px; border:1px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; font-size:16px; color:#334155;">‹</button>
+            <input type="date" id="sales-date-input" onchange="loadDailySales()"
+                style="padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; color:#1e293b;">
+            <button onclick="changeSalesDate(1)" style="width:34px; height:34px; border:1px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; font-size:16px; color:#334155;">›</button>
+            <button onclick="loadDailySales()" style="padding:9px 18px; background:#1e293b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">Yangilash</button>
+        </div>
+    </div>
+
+    <!-- ========== STATISTIKA KARTOCHKALARI ========== -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:16px; margin-bottom:20px;">
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#64748b;">Savdolar</div>
+            <div id="stat-total-sales" style="font-size:24px; font-weight:700; color:#1e293b; margin-top:6px;">0</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#64748b;">Naqd</div>
+            <div id="stat-cash" style="font-size:24px; font-weight:700; color:#1e293b; margin-top:6px;">0</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#64748b;">Karta</div>
+            <div id="stat-card" style="font-size:24px; font-weight:700; color:#1e293b; margin-top:6px;">0</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#64748b;">Nasiya</div>
+            <div id="stat-credit" style="font-size:24px; font-weight:700; color:#1e293b; margin-top:6px;">0</div>
+        </div>
+        <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#64748b;">Qaytarish</div>
+            <div id="stat-returns" style="font-size:24px; font-weight:700; color:#ef4444; margin-top:6px;">− 0</div>
+        </div>
+        <div style="background:#dcfce7; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:13px; color:#166534;">Sof tushum</div>
+            <div id="stat-net" style="font-size:24px; font-weight:700; color:#14532d; margin-top:6px;">0</div>
+        </div>
+    </div>
+
+    <!-- ========== SAVDOLAR JADVALI ========== -->
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px;">CHEK</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px;">TUR</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px;">VAQT</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px;">TO'LOV</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px;">JAMI</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.5px;">FISKAL</th>
+                </tr>
+            </thead>
+            <tbody id="sales-table-body">
+                <tr><td colspan="6" style="padding:24px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function init_sales() {
+    const today = new Date();
+    document.getElementById('sales-date-input').value = formatDateForInput(today);
+    loadDailySales();
+}
+
+function formatDateForInput(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function changeSalesDate(diffDays) {
+    const input = document.getElementById('sales-date-input');
+    const current = new Date(input.value + 'T00:00:00');
+    current.setDate(current.getDate() + diffDays);
+    input.value = formatDateForInput(current);
+    loadDailySales();
+}
+
+function loadDailySales() {
+    const selectedDate = document.getElementById('sales-date-input').value;
+    const tbody = document.getElementById('sales-table-body');
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:24px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>';
+
+    fetch(`/api/sales/daily-sales/?date=${selectedDate}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Server xatosi: ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            document.getElementById('stat-total-sales').innerText = data.total_sales;
+            document.getElementById('stat-cash').innerText = formatMoney(data.cash_income);
+            document.getElementById('stat-card').innerText = formatMoney(data.card_income);
+            document.getElementById('stat-credit').innerText = formatMoney(data.credit_income);
+            document.getElementById('stat-returns').innerText = '− ' + formatMoney(data.returns);
+            document.getElementById('stat-net').innerText = formatMoney(data.net_income);
+
+            if (!data.sales.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding:24px; text-align:center; color:#94a3b8;">Bu kunda savdo yo\'q</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.sales.map(sale => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:12px 20px; font-weight:600; color:#1e293b;">#${sale.id}</td>
+                    <td style="padding:12px 20px; color:#64748b;">Sotish</td>
+                    <td style="padding:12px 20px; color:#64748b;">${formatTime(sale.created_at)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${sale.payment_method_display}</td>
+                    <td style="padding:12px 20px; font-weight:700; color:#1e293b;">${formatMoney(sale.total_amount)}</td>
+                    <td style="padding:12px 20px; color:#94a3b8;">—</td>
+                </tr>
+            `).join('');
+        })
+        .catch(err => {
+            tbody.innerHTML = `<tr><td colspan="6" style="padding:24px; text-align:center; color:#ef4444;">Xatolik: ${err.message}</td></tr>`;
+        });
+}
+
+function formatMoney(value) {
+    return Number(value || 0).toLocaleString('uz-UZ');
+}
+
+function formatTime(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+}
+
+init_sales();
+</script>

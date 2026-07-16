@@ -1,0 +1,342 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b; font-weight:700;">Transfer (Filiallararo ko'chirish)</h2>
+        <button onclick="toggleTransferForm()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Yangi transfer</button>
+    </div>
+
+    <div id="tr-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+    <div id="tr-success-banner" style="display:none; background:#dcfce7; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div id="new-transfer-form" style="display:none; background:white; border-radius:12px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px;">
+        <h3 style="font-size:16px; color:#1e293b; margin-bottom:16px; font-weight:700;">Yangi transfer</h3>
+
+        <div style="display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Manba filial</label>
+                <select id="tr-source-store" style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <option value="">— Tanlang —</option>
+                </select>
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label style="font-size:13px; color:#64748b; font-weight:600;">Maqsad filial</label>
+                <select id="tr-dest-store" style="width:100%; padding:10px 14px; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <option value="">— Tanlang —</option>
+                </select>
+            </div>
+        </div>
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Izoh (ixtiyoriy)</label>
+        <input type="text" id="tr-comment-input" placeholder="Izoh..."
+            style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+
+        <label style="font-size:13px; color:#64748b; font-weight:600;">Tovar qo'shish</label>
+        <div style="position:relative;">
+            <input type="text" id="tr-product-search" placeholder="Qidirish (nom/shtrix-kod)..." oninput="searchTrProducts()" autocomplete="off"
+                style="width:100%; padding:10px 14px; margin-top:6px; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            <div id="tr-search-results" style="display:none; position:absolute; top:44px; left:0; right:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,0.1); z-index:50; max-height:240px; overflow-y:auto;"></div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+            <thead>
+                <tr style="text-align:left;">
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">TOVAR</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">MIQDOR</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">QOLDIQ</th>
+                    <th style="padding:8px 4px;"></th>
+                </tr>
+            </thead>
+            <tbody id="tr-items-body">
+                <tr><td colspan="4" style="padding:14px 4px; color:#94a3b8;">Tovar qo'shilmagan</td></tr>
+            </tbody>
+        </table>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+            <button onclick="submitTransfer()" style="padding:11px 22px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Yuborish</button>
+        </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">RAQAM</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">MANBA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">MAQSAD</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SANA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">TOVARLAR</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SUMMA</th>
+                </tr>
+            </thead>
+            <tbody id="tr-history-body">
+                <tr><td colspan="6" style="padding:24px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let trItems = [];  // { product_id, name, quantity, stock }
+let trSearchTimer = null;
+
+function init_transfer() {
+    loadTrStoreOptions();
+    loadTrHistory();
+}
+
+// ========== DO'KONLAR RO'YXATINI SELECT'GA YUKLASH ==========
+function loadTrStoreOptions() {
+    fetch('/api/stores/list/')
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const sourceSelect = document.getElementById('tr-source-store');
+            const destSelect = document.getElementById('tr-dest-store');
+
+            list.forEach(store => {
+                const opt1 = document.createElement('option');
+                opt1.value = store.id;
+                opt1.textContent = store.name;
+                sourceSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = store.id;
+                opt2.textContent = store.name;
+                destSelect.appendChild(opt2);
+            });
+        })
+        .catch(() => {});
+}
+
+function toggleTransferForm() {
+    const form = document.getElementById('new-transfer-form');
+    const isHidden = (form.style.display === 'none' || !form.style.display);
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        document.getElementById('tr-source-store').value = '';
+        document.getElementById('tr-dest-store').value = '';
+        document.getElementById('tr-comment-input').value = '';
+        document.getElementById('tr-product-search').value = '';
+        document.getElementById('tr-search-results').style.display = 'none';
+        trItems = [];
+        renderTrItems();
+    }
+}
+
+// ========== TOVAR QIDIRISH (AUTOCOMPLETE) ==========
+function searchTrProducts() {
+    clearTimeout(trSearchTimer);
+    const q = document.getElementById('tr-product-search').value.trim();
+    const resultsBox = document.getElementById('tr-search-results');
+
+    if (!q) {
+        resultsBox.style.display = 'none';
+        return;
+    }
+
+    const sourceStoreId = document.getElementById('tr-source-store').value;
+    if (!sourceStoreId) {
+        resultsBox.innerHTML = '<div style="padding:10px 14px; color:#ef4444; font-size:14px;">Avval Manba filialni tanlang</div>';
+        resultsBox.style.display = 'block';
+        return;
+    }
+
+    trSearchTimer = setTimeout(() => {
+        fetch(`/api/products/list/search/?q=${encodeURIComponent(q)}&store_id=${sourceStoreId}`)
+            .then(res => res.json())
+            .then(data => {
+                const list = Array.isArray(data) ? data : (data.results || []);
+                if (!list.length) {
+                    resultsBox.innerHTML = '<div style="padding:10px 14px; color:#94a3b8; font-size:14px;">Topilmadi</div>';
+                    resultsBox.style.display = 'block';
+                    return;
+                }
+                resultsBox.innerHTML = list.map(p => `
+                    <div onclick='addTrProduct(${p.id}, ${JSON.stringify(p.name)}, ${p.stock})'
+                        style="padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; font-size:14px;"
+                        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <div style="font-weight:600; color:#1e293b;">${escapeHtmlTr(p.name)}</div>
+                        <div style="color:#94a3b8; font-size:12px;">Qoldiq: ${p.stock}</div>
+                    </div>
+                `).join('');
+                resultsBox.style.display = 'block';
+            })
+            .catch(() => { resultsBox.style.display = 'none'; });
+    }, 300);
+}
+
+function addTrProduct(id, name, stock) {
+    const existing = trItems.find(i => i.product_id === id);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        trItems.push({ product_id: id, name: name, quantity: 1, stock: stock });
+    }
+    document.getElementById('tr-product-search').value = '';
+    document.getElementById('tr-search-results').style.display = 'none';
+    renderTrItems();
+}
+
+function removeTrItem(productId) {
+    trItems = trItems.filter(i => i.product_id !== productId);
+    renderTrItems();
+}
+
+function updateTrQuantity(productId, value) {
+    const item = trItems.find(i => i.product_id === productId);
+    if (item) {
+        item.quantity = parseFloat(value) || 0;
+        renderTrItems();
+    }
+}
+
+function renderTrItems() {
+    const tbody = document.getElementById('tr-items-body');
+
+    if (!trItems.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:14px 4px; color:#94a3b8;">Tovar qo\'shilmagan</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = trItems.map(item => `
+        <tr style="border-top:1px solid #f1f5f9;">
+            <td style="padding:10px 4px; color:#1e293b; font-weight:600;">${escapeHtmlTr(item.name)}</td>
+            <td style="padding:10px 4px;">
+                <input type="number" value="${item.quantity}" min="0" step="0.001" onchange="updateTrQuantity(${item.product_id}, this.value)"
+                    style="width:80px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px;">
+            </td>
+            <td style="padding:10px 4px; color:#64748b;">${item.stock}</td>
+            <td style="padding:10px 4px;"><button onclick="removeTrItem(${item.product_id})" style="border:none; background:none; color:#ef4444; cursor:pointer; font-size:16px;">✕</button></td>
+        </tr>
+    `).join('');
+}
+
+// ========== TRANSFERNI YUBORISH ==========
+function submitTransfer() {
+    const sourceId = document.getElementById('tr-source-store').value;
+    const destId = document.getElementById('tr-dest-store').value;
+    const comment = document.getElementById('tr-comment-input').value.trim();
+
+    if (!sourceId || !destId) {
+        showTrError("Manba va Maqsad filialni tanlang!");
+        return;
+    }
+    if (sourceId === destId) {
+        showTrError("Manba va Maqsad filial bir xil bo'lishi mumkin emas!");
+        return;
+    }
+    if (!trItems.length) {
+        showTrError("Kamida bitta tovar qo'shing!");
+        return;
+    }
+
+    const payload = {
+        source_store: sourceId,
+        destination_store: destId,
+        comment: comment || null,
+        items: trItems.map(i => ({ product: i.product_id, quantity: i.quantity })),
+    };
+
+    fetch('/api/transfers/list/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieTr('csrftoken') },
+        body: JSON.stringify(payload)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const firstError = Object.values(err)[0];
+                const message = Array.isArray(firstError) ? firstError[0] : (firstError || "Yuborishda xatolik yuz berdi");
+                throw new Error(typeof message === 'string' ? message : JSON.stringify(message));
+            }
+            return res.json();
+        })
+        .then(() => {
+            showTrSuccess("Transfer muvaffaqiyatli yuborildi!");
+            toggleTransferForm();
+            loadTrHistory();
+        })
+        .catch(err => showTrError(err.message));
+}
+
+// ========== TARIX JADVALI ==========
+function loadTrHistory() {
+    fetch('/api/transfers/list/')
+        .then(res => res.json())
+        .then(data => {
+            const list = data.results || data;
+            const tbody = document.getElementById('tr-history-body');
+
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding:24px; text-align:center; color:#94a3b8;">Transferlar yo\'q</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(t => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:12px 20px; font-weight:600; color:#1e293b;">${escapeHtmlTr(t.number)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${escapeHtmlTr(t.source_store_name)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${escapeHtmlTr(t.destination_store_name)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${formatDateTr(t.created_at)}</td>
+                    <td style="padding:12px 20px; color:#64748b;">${t.items.length} ta</td>
+                    <td style="padding:12px 20px; font-weight:700; color:#1e293b;">${formatMoneyTr(t.total_amount)}</td>
+                </tr>
+            `).join('');
+        })
+        .catch(() => {
+            document.getElementById('tr-history-body').innerHTML =
+                '<tr><td colspan="6" style="padding:24px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+// ========== YORDAMCHI FUNKSIYALAR ==========
+function formatMoneyTr(v) {
+    return Number(v || 0).toLocaleString('uz-UZ');
+}
+
+function formatDateTr(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+}
+
+function escapeHtmlTr(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showTrError(message) {
+    const banner = document.getElementById('tr-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4500);
+}
+
+function showTrSuccess(message) {
+    const banner = document.getElementById('tr-success-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4500);
+}
+
+function getCookieTr(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_transfer();
+</script>

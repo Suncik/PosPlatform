@@ -1,0 +1,312 @@
+<div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-size:18px; color:#1e293b; font-weight:700;">Inventarizatsiya</h2>
+        <button onclick="createNewInventory()" style="background:#1d4ed8; color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">+ Yangi inventarizatsiya</button>
+    </div>
+
+    <div id="inv-success-banner" style="display:none; background:#dcfce7; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+    <div id="inv-error-banner" style="display:none; background:#fee2e2; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;"></div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left;">
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">RAQAM</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">SANA</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">HOLAT</th>
+                    <th style="padding:12px 20px; font-size:12px; color:#94a3b8; font-weight:700;">TOVARLAR</th>
+                    <th style="padding:12px 20px; width:40px;"></th>
+                </tr>
+            </thead>
+            <tbody id="inv-list-body">
+                <tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">Yuklanmoqda...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let invCache = [];
+let invExpandedId = null;
+let invEditingMode = false;
+
+function init_inventory() {
+    loadInventoryList();
+}
+
+// ========== RO'YXATNI YUKLASH ==========
+function loadInventoryList() {
+    fetch('/api/inventory/list/')
+        .then(res => res.json())
+        .then(data => {
+            invCache = data.results || data;
+            renderInventoryTable();
+        })
+        .catch(() => {
+            document.getElementById('inv-list-body').innerHTML =
+                '<tr><td colspan="5" style="padding:24px; text-align:center; color:#ef4444;">Yuklashda xatolik</td></tr>';
+        });
+}
+
+function renderInventoryTable() {
+    const tbody = document.getElementById('inv-list-body');
+
+    if (!invCache.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">Inventarizatsiyalar yo\'q</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = invCache.map(inv => {
+        const isExpanded = (inv.id === invExpandedId);
+        const statusBadge = inv.status === 'applied'
+            ? '<span style="background:#dcfce7; color:#16a34a; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;">TASDIQLANGAN</span>'
+            : '<span style="background:#fef3c7; color:#92400e; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;">QORALAMA</span>';
+
+        let rows = `
+            <tr style="border-top:1px solid #f1f5f9; cursor:pointer;" onclick="toggleInvExpand(${inv.id})">
+                <td style="padding:12px 20px; font-weight:700; color:#1e293b;">${inv.number}</td>
+                <td style="padding:12px 20px; color:#64748b;">${formatDateTimeInv(inv.created_at)}</td>
+                <td style="padding:12px 20px;">${statusBadge}</td>
+                <td style="padding:12px 20px; color:#64748b;">${inv.items_count} ta</td>
+                <td style="padding:12px 20px; text-align:center; color:#94a3b8;">${isExpanded ? '▲' : '▼'}</td>
+            </tr>
+        `;
+
+        if (isExpanded) {
+            rows += `<tr><td colspan="5" style="padding:0;"><div style="padding:20px; background:#f8fafc;">${renderInvDetail(inv)}</div></td></tr>`;
+        }
+
+        return rows;
+    }).join('');
+}
+
+function toggleInvExpand(id) {
+    if (invExpandedId === id) {
+        invExpandedId = null;
+    } else {
+        invExpandedId = id;
+        invEditingMode = false;
+    }
+    renderInventoryTable();
+}
+
+// ========== DETAL QISM (Tahrirlash yoki Tafovut ko'rinishi) ==========
+function renderInvDetail(inv) {
+    if (inv.status === 'draft' && invEditingMode) {
+        return renderInvEditForm(inv);
+    }
+    return renderInvDiffView(inv);
+}
+
+function renderInvEditForm(inv) {
+    const rows = inv.items.map(item => `
+        <tr style="border-top:1px solid #f1f5f9;">
+            <td style="padding:10px 4px; color:#1e293b; font-weight:600;">${escapeHtmlInv(item.product_name)}</td>
+            <td style="padding:10px 4px; color:#94a3b8;">${item.barcode ? escapeHtmlInv(item.barcode) : '—'}</td>
+            <td style="padding:10px 4px; color:#64748b;">${item.expected_qty}</td>
+            <td style="padding:10px 4px;">
+                <input type="number" id="inv-item-input-${item.id}" value="${item.actual_qty}" min="0" step="0.001"
+                    style="width:100px; padding:6px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px;">
+            </td>
+        </tr>
+    `).join('');
+
+    return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h4 style="font-size:15px; color:#1e293b; font-weight:700;">Haqiqiy miqdorlarni kiriting</h4>
+            <div style="display:flex; gap:10px;">
+                <button onclick="cancelInvEdit()" style="padding:8px 18px; background:white; color:#334155; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">Bekor</button>
+                <button onclick="saveInvCounts(${inv.id})" style="padding:8px 18px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Saqlash</button>
+            </div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px;">
+            <thead>
+                <tr style="text-align:left;">
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">MAHSULOT</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">SHTRIX-KOD</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">KUTILGAN</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">HAQIQIY</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+function renderInvDiffView(inv) {
+    const rows = inv.items.map(item => {
+        const diff = item.difference;
+        const diffText = diff === 0 ? '—' : (diff > 0 ? `+${diff}` : `${diff}`);
+        const diffColor = diff === 0 ? '#94a3b8' : (diff > 0 ? '#16a34a' : '#dc2626');
+        return `
+            <tr style="border-top:1px solid #f1f5f9;">
+                <td style="padding:10px 4px; color:#1e293b; font-weight:600;">${escapeHtmlInv(item.product_name)}</td>
+                <td style="padding:10px 4px; color:#94a3b8;">${item.barcode ? escapeHtmlInv(item.barcode) : '—'}</td>
+                <td style="padding:10px 4px; color:#64748b;">${item.expected_qty}</td>
+                <td style="padding:10px 4px; color:#64748b;">${item.actual_qty}</td>
+                <td style="padding:10px 4px; font-weight:700; color:${diffColor};">${diffText}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const actionButtons = inv.status === 'draft'
+        ? `<button onclick="startInvEdit()" style="padding:8px 18px; background:white; color:#334155; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;">Tahrirlash</button>
+           <button onclick="applyInventory(${inv.id}, '${inv.number}')" style="padding:8px 18px; background:#1d4ed8; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px;">Qo'llash</button>`
+        : `<span style="color:#16a34a; font-weight:600; font-size:14px;">✓ Omborga yozilgan</span>`;
+
+    return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h4 style="font-size:15px; color:#1e293b; font-weight:700;">Tafovutlar</h4>
+            <div style="display:flex; gap:10px;">${actionButtons}</div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px;">
+            <thead>
+                <tr style="text-align:left;">
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">MAHSULOT</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">SHTRIX-KOD</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">KUTILGAN</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">HAQIQIY</th>
+                    <th style="padding:8px 4px; font-size:12px; color:#94a3b8; font-weight:700;">TAFOVUT</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+// ========== YANGI INVENTARIZATSIYA YARATISH ==========
+function createNewInventory() {
+    fetch('/api/inventory/list/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieInv('csrftoken') },
+        body: JSON.stringify({})
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Yaratishda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(inv => {
+            showInvSuccess(`Inventarizatsiya ${inv.number} yaratildi — tovarlar miqdorlarini kiriting.`);
+            invExpandedId = inv.id;
+            invEditingMode = true;
+            loadInventoryList();
+        })
+        .catch(err => showInvError(err.message));
+}
+
+// ========== TAHRIRLASH REJIMINI BOSHQARISH ==========
+function startInvEdit() {
+    invEditingMode = true;
+    renderInventoryTable();
+}
+
+function cancelInvEdit() {
+    invEditingMode = false;
+    renderInventoryTable();
+}
+
+// ========== SAQLASH (haqiqiy miqdorlar) ==========
+function saveInvCounts(invId) {
+    const inv = invCache.find(i => i.id === invId);
+    if (!inv) return;
+
+    const items = inv.items.map(item => ({
+        item_id: item.id,
+        actual_qty: parseFloat(document.getElementById(`inv-item-input-${item.id}`).value) || 0,
+    }));
+
+    fetch(`/api/inventory/list/${invId}/save_counts/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookieInv('csrftoken') },
+        body: JSON.stringify({ items })
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Saqlashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            invEditingMode = false;
+            loadInventoryList();
+        })
+        .catch(err => showInvError(err.message));
+}
+
+// ========== QO'LLASH (omborga yozish) ==========
+function applyInventory(invId, number) {
+    if (!confirm(`${number} — inventarizatsiyani qo'llash? Tafovutlar omborga yoziladi.`)) return;
+
+    fetch(`/api/inventory/list/${invId}/apply/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookieInv('csrftoken') }
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Qo'llashda xatolik yuz berdi");
+            }
+            return res.json();
+        })
+        .then(() => {
+            showInvSuccess("Inventarizatsiya tasdiqlandi, tafovutlar omborga yozildi.");
+            loadInventoryList();
+        })
+        .catch(err => showInvError(err.message));
+}
+
+// ========== YORDAMCHI FUNKSIYALAR ==========
+function formatDateTimeInv(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy}, ${hh}:${min}:${ss}`;
+}
+
+function escapeHtmlInv(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showInvSuccess(message) {
+    const banner = document.getElementById('inv-success-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 5000);
+}
+
+function showInvError(message) {
+    const banner = document.getElementById('inv-error-banner');
+    banner.innerText = message;
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+function getCookieInv(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+init_inventory();
+</script>
